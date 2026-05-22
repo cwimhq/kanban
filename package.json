@@ -1,0 +1,66 @@
+{
+  "name": "@cwim/kanban",
+  "version": "1.1.1",
+  "description": "Minimal Kanban task tracking with MCP integration for Claude Code",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "kanban": "dist/cli/commands.js",
+    "kb": "dist/cli/commands.js"
+  },
+  "files": [
+    "dist",
+    "dashboard/dist"
+  ],
+  "scripts": {
+    "build": "npm run build:dashboard && npm run build:server",
+    "build:dashboard": "cd dashboard && tsc -b && vite build",
+    "build:server": "tsc -p tsconfig.server.json",
+    "dev": "cd dashboard && vite",
+    "dev:dashboard": "cd dashboard && vite",
+    "check": "tsc -p tsconfig.server.json --noEmit && cd dashboard && tsc -b --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write ."
+  },
+  "keywords": [
+    "claude-code",
+    "mcp",
+    "kanban",
+    "task-tracking",
+    "context-window",
+    "cwim"
+  ],
+  "author": "Chiheb Nabil",
+  "repository": {
+    "url": "https://github.com/cwimhq/kanban.git"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "commander": "^13.1.0",
+    "date-fns": "^4.1.0",
+    "lucide-react": "^0.562.0",
+    "open": "^10.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.5",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.1",
+    "autoprefixer": "^10.4.23",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "postcss": "^8.5.6",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "tailwind-merge": "^3.4.0",
+    "tailwindcss": "^3.4.19",
+    "tailwindcss-animate": "^1.0.7",
+    "typescript": "~5.9.3",
+    "vite": "^7.2.4"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

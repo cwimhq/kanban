@@ -1,0 +1,148 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-[#2A2A3A];
+  }
+
+  body {
+    @apply bg-[#0A0A0F] text-[#E8E8F0] antialiased;
+    font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #2A2A3A;
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #3D3D5C;
+  }
+}
+
+@layer utilities {
+  /* Card entrance animation */
+  @keyframes cardEnter {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-card-enter {
+    animation: cardEnter 300ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  /* Column flash animation */
+  @keyframes columnFlash {
+    0% {
+      border-left-width: 3px;
+      box-shadow: none;
+    }
+    30% {
+      border-left-width: 6px;
+    }
+    100% {
+      border-left-width: 3px;
+      box-shadow: none;
+    }
+  }
+
+  .animate-column-flash-todo {
+    animation: columnFlash 600ms ease-out;
+    border-left-color: #F59E0B;
+    box-shadow: 0 0 8px rgba(245, 158, 11, 0.4);
+  }
+
+  .animate-column-flash-inprogress {
+    animation: columnFlash 600ms ease-out;
+    border-left-color: #3B82F6;
+    box-shadow: 0 0 8px rgba(59, 130, 246, 0.4);
+  }
+
+  .animate-column-flash-done {
+    animation: columnFlash 600ms ease-out;
+    border-left-color: #10B981;
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+  }
+
+  .animate-column-flash-blocked {
+    animation: columnFlash 600ms ease-out;
+    border-left-color: #EF4444;
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+  }
+
+  /* Toast slide up */
+  @keyframes toastIn {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes toastOut {
+    from {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+  }
+
+  .animate-toast-in {
+    animation: toastIn 300ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .animate-toast-out {
+    animation: toastOut 300ms ease-in forwards;
+  }
+
+  /* Pulse ring for LIVE indicator */
+  @keyframes pulseRing {
+    0% {
+      transform: scale(1);
+      opacity: 0.6;
+    }
+    100% {
+      transform: scale(2.5);
+      opacity: 0;
+    }
+  }
+
+  .animate-pulse-ring {
+    animation: pulseRing 2s ease-out infinite;
+  }
+
+  /* Empty state fade */
+  @keyframes emptyFade {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  .animate-empty-fade {
+    animation: emptyFade 200ms ease forwards;
+  }
+}

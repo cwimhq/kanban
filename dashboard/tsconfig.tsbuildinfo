@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/main.tsx","./src/types.ts","./src/components/column.tsx","./src/components/emptystate.tsx","./src/components/header.tsx","./src/components/kanbanboard.tsx","./src/components/liveindicator.tsx","./src/components/newtasktoast.tsx","./src/components/tag.tsx","./src/components/taskcard.tsx","./src/hooks/usetasks.ts"],"version":"5.9.3"}

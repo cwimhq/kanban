@@ -136,6 +136,7 @@ program
   .description('List all tasks in the current session')
   .option('-s, --status <status>', 'Filter by status')
   .option('-t, --tag <tag>', 'Filter by tag')
+  .option('-q, --query <query>', 'Search query for title/description')
   .action(async (options) => {
     await initStorage();
     const sessionName = await getCurrentSessionName();
@@ -144,6 +145,7 @@ program
         ? options.status
         : undefined,
       tag: options.tag,
+      query: options.query,
     });
     if (tasks.length === 0) {
       console.log(`No tasks found in session "${sessionName}"`);

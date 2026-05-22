@@ -175,7 +175,7 @@ async function writeSessionData(sessionName: string, data: TaskFlowData): Promis
 
 export async function listTasks(
   sessionName?: string,
-  filter?: { status?: TaskStatus; tag?: string }
+  filter?: { status?: TaskStatus; tag?: string; query?: string }
 ): Promise<Task[]> {
   const targetSession = sessionName ?? await getCurrentSessionName();
   const data = await readSessionData(targetSession);
@@ -185,6 +185,13 @@ export async function listTasks(
   }
   if (filter?.tag) {
     tasks = tasks.filter((t) => t.tags.includes(filter.tag!));
+  }
+  if (filter?.query) {
+    const q = filter.query.toLowerCase();
+    tasks = tasks.filter((t) =>
+      t.title.toLowerCase().includes(q) ||
+      (t.description?.toLowerCase().includes(q) ?? false)
+    );
   }
   return tasks;
 }

@@ -122,6 +122,10 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
               type: 'string',
               description: 'Filter by tag',
             },
+            query: {
+              type: 'string',
+              description: 'Search query to filter tasks by title or description (case-insensitive)',
+            },
           },
         },
       },
@@ -253,6 +257,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request: CallToolRequest)
             ? (args.status as any)
             : undefined,
           tag: args.tag ? String(args.tag) : undefined,
+          query: args.query ? String(args.query) : undefined,
         });
         const sessionName = await getCurrentSessionName();
         if (tasks.length === 0) {

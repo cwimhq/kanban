@@ -13,6 +13,7 @@ import {
   updateTask,
   moveTask,
   deleteTask,
+  appendNote,
   listAllSessions,
   getCurrentSessionName,
   setActiveSession,
@@ -127,6 +128,18 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
               description: 'Search query to filter tasks by title or description (case-insensitive)',
             },
           },
+        },
+      },
+      {
+        name: 'task_append_note',
+        description: 'Append a timestamped note to a task without overwriting existing content',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', description: 'Task ID (required)' },
+            note: { type: 'string', description: 'Note text to append (required)' },
+          },
+          required: ['id', 'note'],
         },
       },
       {
@@ -273,6 +286,25 @@ server.setRequestHandler(CallToolRequestSchema, async (request: CallToolRequest)
         };
       }
 
+      case 'task_append_note': {
+        const task = await appendNote(String(args.id), String(args.note));
+        if (!task) {
+          return {
+            content: [{ type: 'text', text: `Task ${args.id} not found` }],
+            isError: true,
+          };
+        }
+        const noteCount = task.notes?.length ?? 0;
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Appended note to "${task.title}" (${task.id})\nTotal notes: ${noteCount}`,
+            },
+          ],
+        };
+      }
+
       case 'task_get': {
         const task = await getTask(String(args.id));
         if (!task) {
@@ -281,11 +313,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request: CallToolRequest)
             isError: true,
           };
         }
+        const notesText = task.notes?.length
+          ? `\nNotes (${task.notes.length}):\n${task.notes.join('\n')}`
+          : '';
         return {
           content: [
             {
               type: 'text',
-              text: `Task: ${task.title}\nID: ${task.id}\nStatus: ${task.status}\nDescription: ${task.description ?? '(none)'}\nTags: ${task.tags.join(', ') || '(none)'}\nCreated: ${task.createdAt}\nUpdated: ${task.updatedAt}`,
+              text: `Task: ${task.title}\nID: ${task.id}\nStatus: ${task.status}\nDescription: ${task.description ?? '(none)'}${notesText}\nTags: ${task.tags.join(', ') || '(none)'}\nCreated: ${task.createdAt}\nUpdated: ${task.updatedAt}`,
             },
           ],
         };

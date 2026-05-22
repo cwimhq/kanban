@@ -270,6 +270,28 @@ export async function deleteTask(id: string, sessionName?: string): Promise<bool
   return true;
 }
 
+export async function appendNote(
+  id: string,
+  note: string,
+  sessionName?: string
+): Promise<Task | undefined> {
+  const targetSession = sessionName ?? await getCurrentSessionName();
+  const data = await readSessionData(targetSession);
+  const idx = data.tasks.findIndex((t) => t.id === id);
+  if (idx === -1) return undefined;
+
+  const task = data.tasks[idx];
+  if (!task.notes) {
+    task.notes = [];
+  }
+  const timestamp = new Date().toISOString();
+  task.notes.push(`[${timestamp}] ${note}`);
+  task.updatedAt = timestamp;
+
+  await writeSessionData(targetSession, data);
+  return task;
+}
+
 export async function getAllData(sessionName?: string): Promise<TaskFlowData> {
   const targetSession = sessionName ?? await getCurrentSessionName();
   const data = await readSessionData(targetSession);

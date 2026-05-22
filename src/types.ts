@@ -4,6 +4,7 @@ export interface Task {
   id: string;
   title: string;
   description?: string;
+  notes?: string[];
   status: TaskStatus;
   tags: string[];
   source: 'claude' | 'manual';

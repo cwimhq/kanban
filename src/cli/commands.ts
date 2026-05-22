@@ -9,6 +9,7 @@ import {
   moveTask,
   deleteTask,
   getTask,
+  appendNote,
   getAllData,
   listAllSessions,
   getCurrentSessionName,
@@ -214,6 +215,23 @@ program
     }
   });
 
+// Append note to task
+program
+  .command('note <id> <text>')
+  .description('Append a note to a task')
+  .action(async (id, text) => {
+    await initStorage();
+    const task = await appendNote(id, text);
+    if (task) {
+      const noteCount = task.notes?.length ?? 0;
+      console.log(`Note appended to: ${task.title}`);
+      console.log(`Total notes: ${noteCount}`);
+    } else {
+      console.error(`Task not found: ${id}`);
+      process.exit(1);
+    }
+  });
+
 // Show task details
 program
   .command('show <id>')
@@ -230,6 +248,12 @@ program
     console.log(`ID:          ${task.id}`);
     console.log(`Status:      ${task.status}`);
     console.log(`Description: ${task.description ?? '(none)'}`);
+    if (task.notes && task.notes.length > 0) {
+      console.log(`Notes (${task.notes.length}):`);
+      for (const note of task.notes) {
+        console.log(`  ${note}`);
+      }
+    }
     console.log(`Tags:        ${task.tags.join(', ') || '(none)'}`);
     console.log(`Source:      ${task.source}`);
     console.log(`Session:     ${sessionName}`);

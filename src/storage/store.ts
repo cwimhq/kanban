@@ -306,6 +306,89 @@ export async function getAllData(sessionName?: string): Promise<TaskFlowData> {
   return data;
 }
 
+// Smart context recall for agent memory
+
+interface RecallResult {
+  relevant: Task[];
+  summary: {
+    active: number;
+    done: number;
+    blocked: number;
+    total: number;
+  };
+}
+
+export async function recallTasks(
+  context: string,
+  limit: number = 5,
+  sessionName?: string
+): Promise<RecallResult> {
+  const targetSession = sessionName ?? await getCurrentSessionName();
+  const data = await readSessionData(targetSession);
+  
+  if (data.tasks.length === 0) {
+    return {
+      relevant: [],
+      summary: { active: 0, done: 0, blocked: 0, total: 0 },
+    };
+  }
+
+  // Extract keywords from context (simple tokenization)
+  const keywords = context
+    .toLowerCase()
+    .split(/\s+/)
+    .filter((w) => w.length > 2)
+    .filter((w) => !['the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can', 'had', 'her', 'was', 'one', 'our', 'out', 'day', 'get', 'has', 'him', 'his', 'how', 'its', 'may', 'new', 'now', 'old', 'see', 'two', 'who', 'boy', 'did', 'she', 'use', 'her', 'way', 'many', 'oil', 'sit', 'set', 'run', 'eat', 'far', 'sea', 'eye', 'ago', 'off', 'too', 'any', 'say', 'man', 'try', 'ask', 'end', 'why', 'let', 'put', 'say', 'she', 'try', 'way', 'own', 'say', 'too', 'old', 'tell', 'very', 'when', 'much', 'would', 'there', 'their', 'what', 'said', 'each', 'which', 'will', 'about', 'could', 'other', 'after', 'first', 'never', 'these', 'think', 'where', 'being', 'every', 'great', 'might', 'shall', 'still', 'those', 'while', 'this', 'that', 'with', 'have', 'from', 'they', 'know', 'want', 'been', 'good', 'much', 'some', 'time', 'very', 'when', 'come', 'here', 'just', 'like', 'long', 'make', 'many', 'over', 'such', 'take', 'than', 'them', 'well', 'were'].includes(w));
+
+  // Score each task by relevance
+  const scored = data.tasks.map((task) => {
+    let score = 0;
+    const text = `${task.title} ${task.description ?? ''} ${task.tags.join(' ')} ${task.notes?.join(' ') ?? ''}`.toLowerCase();
+    
+    // Keyword matches
+    for (const keyword of keywords) {
+      if (text.includes(keyword)) {
+        score += 2;
+      }
+    }
+    
+    // Boost recent tasks
+    const age = Date.now() - new Date(task.updatedAt).getTime();
+    const hoursOld = age / (1000 * 60 * 60);
+    if (hoursOld < 1) score += 3;
+    else if (hoursOld < 24) score += 2;
+    else if (hoursOld < 72) score += 1;
+    
+    // Boost active/in-progress tasks
+    if (task.status === 'in-progress') score += 2;
+    else if (task.status === 'todo') score += 1;
+    
+    // Boost tasks with notes (more context)
+    if (task.notes && task.notes.length > 0) score += 1;
+    
+    return { task, score };
+  });
+
+  // Sort by score descending
+  scored.sort((a, b) => b.score - a.score);
+  
+  // Take top N
+  const relevant = scored
+    .filter((s) => s.score > 0)
+    .slice(0, limit)
+    .map((s) => s.task);
+
+  // Calculate summary
+  const summary = {
+    active: data.tasks.filter((t) => t.status === 'in-progress').length,
+    done: data.tasks.filter((t) => t.status === 'done').length,
+    blocked: data.tasks.filter((t) => t.status === 'blocked').length,
+    total: data.tasks.length,
+  };
+
+  return { relevant, summary };
+}
+
 // Legacy init (creates dirs if needed)
 export async function initStorage(): Promise<void> {
   ensureDir(KANBAN_DIR);

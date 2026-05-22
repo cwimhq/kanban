@@ -10,6 +10,7 @@ import {
   deleteTask,
   getTask,
   appendNote,
+  recallTasks,
   getAllData,
   listAllSessions,
   getCurrentSessionName,
@@ -229,6 +230,35 @@ program
     } else {
       console.error(`Task not found: ${id}`);
       process.exit(1);
+    }
+  });
+
+// Recall relevant tasks
+program
+  .command('recall [context]')
+  .description('Recall relevant tasks based on context')
+  .option('-l, --limit <number>', 'Max number of tasks to return', '5')
+  .action(async (context, options) => {
+    await initStorage();
+    const limit = parseInt(options.limit, 10) || 5;
+    const result = await recallTasks(context || '', limit);
+    const sessionName = await getCurrentSessionName();
+
+    console.log(`Session: ${sessionName}`);
+    console.log(`Summary: ${result.summary.active} active, ${result.summary.done} done, ${result.summary.blocked} blocked (total: ${result.summary.total})`);
+    console.log('');
+
+    if (result.relevant.length === 0) {
+      console.log('No relevant tasks found.');
+      return;
+    }
+
+    console.log(`Relevant tasks (${result.relevant.length}):`);
+    for (const t of result.relevant) {
+      const notesPreview = t.notes && t.notes.length > 0
+        ? ` [${t.notes.length} notes]`
+        : '';
+      console.log(`• [${t.status}] ${t.title} (${t.id})${notesPreview}`);
     }
   });
 

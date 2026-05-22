@@ -14,6 +14,7 @@ import {
   moveTask,
   deleteTask,
   appendNote,
+  recallTasks,
   listAllSessions,
   getCurrentSessionName,
   setActiveSession,
@@ -140,6 +141,24 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             note: { type: 'string', description: 'Note text to append (required)' },
           },
           required: ['id', 'note'],
+        },
+      },
+      {
+        name: 'task_recall',
+        description: 'Intelligently recall relevant task context based on current work. Call this before starting complex tasks to check for existing context and avoid duplicating work.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            context: {
+              type: 'string',
+              description: 'Brief description of what you are about to work on (e.g., "refactoring auth middleware")',
+            },
+            limit: {
+              type: 'number',
+              description: 'Max number of relevant tasks to return (default: 5)',
+              default: 5,
+            },
+          },
         },
       },
       {
@@ -300,6 +319,40 @@ server.setRequestHandler(CallToolRequestSchema, async (request: CallToolRequest)
             {
               type: 'text',
               text: `Appended note to "${task.title}" (${task.id})\nTotal notes: ${noteCount}`,
+            },
+          ],
+        };
+      }
+
+      case 'task_recall': {
+        const context = args.context ? String(args.context) : '';
+        const limit = typeof args.limit === 'number' ? args.limit : 5;
+        const result = await recallTasks(context, limit);
+        const sessionName = await getCurrentSessionName();
+
+        if (result.relevant.length === 0) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `No relevant tasks found in session "${sessionName}".\n\nSession Summary: ${result.summary.active} active, ${result.summary.done} done, ${result.summary.blocked} blocked (total: ${result.summary.total})`,
+              },
+            ],
+          };
+        }
+
+        const lines = result.relevant.map((t) => {
+          const notesPreview = t.notes && t.notes.length > 0
+            ? `\n  Notes: ${t.notes.length} entries`
+            : '';
+          return `• [${t.status}] ${t.title} (${t.id})${notesPreview}`;
+        });
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Relevant Context Found (${result.relevant.length} tasks):\n\n${lines.join('\n')}\n\nSession Summary: ${result.summary.active} active, ${result.summary.done} done, ${result.summary.blocked} blocked (total: ${result.summary.total})`,
             },
           ],
         };

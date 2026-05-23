@@ -73,6 +73,14 @@ export function KanbanBoard() {
       ? [STATUS_ORDER[activeFilter - 1]]
       : STATUS_ORDER;
 
+  const handleTaskDoubleClick = useCallback((task: Task) => {
+    setSelectedTask(task);
+  }, []);
+
+  const handleCloseModal = useCallback(() => {
+    setSelectedTask(null);
+  }, []);
+
   if (loading) {
     return <LoadingSkeleton />;
   }
@@ -95,14 +103,6 @@ export function KanbanBoard() {
   }
 
   const tasks = data?.tasks ?? [];
-
-  const handleTaskDoubleClick = useCallback((task: Task) => {
-    setSelectedTask(task);
-  }, []);
-
-  const handleCloseModal = useCallback(() => {
-    setSelectedTask(null);
-  }, []);
 
   return (
     <>

@@ -345,7 +345,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request: CallToolRequest)
           const notesPreview = t.notes && t.notes.length > 0
             ? `\n  Notes: ${t.notes.length} entries`
             : '';
-          return `• [${t.status}] ${t.title} (${t.id})${notesPreview}`;
+          const reasons = result.reasons.get(t.id);
+          const reasonText = reasons && reasons.length > 0
+            ? `\n  Matched: ${reasons.map(r => `${r.field} "${r.matched}"`).join(', ')}`
+            : '';
+          return `• [${t.status}] ${t.title} (${t.id})${notesPreview}${reasonText}`;
         });
 
         return {

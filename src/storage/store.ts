@@ -308,14 +308,116 @@ export async function getAllData(sessionName?: string): Promise<TaskFlowData> {
 
 // Smart context recall for agent memory
 
+interface MatchReason {
+  field: string;
+  matched: string;
+}
+
+interface ScoredTask {
+  task: Task;
+  score: number;
+  signals: number;
+  reasons: MatchReason[];
+}
+
 interface RecallResult {
   relevant: Task[];
+  reasons: Map<string, MatchReason[]>;
   summary: {
     active: number;
     done: number;
     blocked: number;
     total: number;
   };
+  quality: 'excellent' | 'good' | 'fair' | 'poor';
+}
+
+const STOP_WORDS = new Set([
+  'the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can', 'had', 'her', 'was', 'one', 'our', 'out', 'day', 'get', 'has', 'him', 'his', 'how', 'its', 'may', 'new', 'now', 'old', 'see', 'two', 'who', 'boy', 'did', 'she', 'use', 'her', 'way', 'many', 'oil', 'sit', 'set', 'run', 'eat', 'far', 'sea', 'eye', 'ago', 'off', 'too', 'any', 'say', 'man', 'try', 'ask', 'end', 'why', 'let', 'put', 'say', 'she', 'try', 'way', 'own', 'say', 'too', 'old', 'tell', 'very', 'when', 'much', 'would', 'there', 'their', 'what', 'said', 'each', 'which', 'will', 'about', 'could', 'other', 'after', 'first', 'never', 'these', 'think', 'where', 'being', 'every', 'great', 'might', 'shall', 'still', 'those', 'while', 'this', 'that', 'with', 'have', 'from', 'they', 'know', 'want', 'been', 'good', 'much', 'some', 'time', 'very', 'when', 'come', 'here', 'just', 'like', 'long', 'make', 'many', 'over', 'such', 'take', 'than', 'them', 'well', 'were'
+]);
+
+function extractKeywords(text: string): string[] {
+  return text
+    .toLowerCase()
+    .split(/\s+/)
+    .filter((w) => w.length > 2)
+    .filter((w) => !STOP_WORDS.has(w));
+}
+
+function getTaskFields(task: Task): { [key: string]: string } {
+  return {
+    title: task.title.toLowerCase(),
+    tags: task.tags.join(' ').toLowerCase(),
+    description: (task.description || '').toLowerCase(),
+    notes: (task.notes || []).join(' ').toLowerCase(),
+  };
+}
+
+function scoreTask(task: Task, queryWords: string[]): ScoredTask {
+  let score = 0;
+  let signals = 0;
+  const reasons: MatchReason[] = [];
+  const fields = getTaskFields(task);
+  
+  // Title matches (highest weight: 5)
+  for (const word of queryWords) {
+    if (fields.title.includes(word)) {
+      score += 5;
+      signals++;
+      reasons.push({ field: 'title', matched: word });
+      break; // Only count title once per word
+    }
+  }
+  
+  // Tag matches (weight: 4)
+  for (const word of queryWords) {
+    if (fields.tags.includes(word)) {
+      score += 4;
+      signals++;
+      reasons.push({ field: 'tag', matched: word });
+      break;
+    }
+  }
+  
+  // Description matches (weight: 2)
+  for (const word of queryWords) {
+    if (fields.description.includes(word)) {
+      score += 2;
+      signals++;
+      reasons.push({ field: 'description', matched: word });
+      break;
+    }
+  }
+  
+  // Notes matches (lowest weight: 1)
+  for (const word of queryWords) {
+    if (fields.notes.includes(word)) {
+      score += 1;
+      signals++;
+      reasons.push({ field: 'notes', matched: word });
+      break;
+    }
+  }
+  
+  // Recency boost
+  const age = Date.now() - new Date(task.updatedAt).getTime();
+  const hoursOld = age / (1000 * 60 * 60);
+  if (hoursOld < 1) {
+    score += 2;
+  } else if (hoursOld < 24) {
+    score += 1;
+  }
+  
+  // Status boost
+  if (task.status === 'in-progress') {
+    score += 2;
+    signals++;
+  } else if (task.status === 'blocked') {
+    score += 1;
+    signals++;
+  }
+  
+  return { task, score, signals, reasons };
 }
 
 export async function recallTasks(
@@ -329,55 +431,47 @@ export async function recallTasks(
   if (data.tasks.length === 0) {
     return {
       relevant: [],
+      reasons: new Map(),
       summary: { active: 0, done: 0, blocked: 0, total: 0 },
+      quality: 'poor',
     };
   }
 
-  // Extract keywords from context (simple tokenization)
-  const keywords = context
-    .toLowerCase()
-    .split(/\s+/)
-    .filter((w) => w.length > 2)
-    .filter((w) => !['the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can', 'had', 'her', 'was', 'one', 'our', 'out', 'day', 'get', 'has', 'him', 'his', 'how', 'its', 'may', 'new', 'now', 'old', 'see', 'two', 'who', 'boy', 'did', 'she', 'use', 'her', 'way', 'many', 'oil', 'sit', 'set', 'run', 'eat', 'far', 'sea', 'eye', 'ago', 'off', 'too', 'any', 'say', 'man', 'try', 'ask', 'end', 'why', 'let', 'put', 'say', 'she', 'try', 'way', 'own', 'say', 'too', 'old', 'tell', 'very', 'when', 'much', 'would', 'there', 'their', 'what', 'said', 'each', 'which', 'will', 'about', 'could', 'other', 'after', 'first', 'never', 'these', 'think', 'where', 'being', 'every', 'great', 'might', 'shall', 'still', 'those', 'while', 'this', 'that', 'with', 'have', 'from', 'they', 'know', 'want', 'been', 'good', 'much', 'some', 'time', 'very', 'when', 'come', 'here', 'just', 'like', 'long', 'make', 'many', 'over', 'such', 'take', 'than', 'them', 'well', 'were'].includes(w));
-
-  // Score each task by relevance
-  const scored = data.tasks.map((task) => {
-    let score = 0;
-    const text = `${task.title} ${task.description ?? ''} ${task.tags.join(' ')} ${task.notes?.join(' ') ?? ''}`.toLowerCase();
-    
-    // Keyword matches
-    for (const keyword of keywords) {
-      if (text.includes(keyword)) {
-        score += 2;
-      }
-    }
-    
-    // Boost recent tasks
-    const age = Date.now() - new Date(task.updatedAt).getTime();
-    const hoursOld = age / (1000 * 60 * 60);
-    if (hoursOld < 1) score += 3;
-    else if (hoursOld < 24) score += 2;
-    else if (hoursOld < 72) score += 1;
-    
-    // Boost active/in-progress tasks
-    if (task.status === 'in-progress') score += 2;
-    else if (task.status === 'todo') score += 1;
-    
-    // Boost tasks with notes (more context)
-    if (task.notes && task.notes.length > 0) score += 1;
-    
-    return { task, score };
-  });
-
+  const queryWords = extractKeywords(context);
+  
+  // Score all tasks
+  const scored = data.tasks.map((task) => scoreTask(task, queryWords));
+  
   // Sort by score descending
   scored.sort((a, b) => b.score - a.score);
   
-  // Take top N
-  const relevant = scored
-    .filter((s) => s.score > 0)
-    .slice(0, limit)
-    .map((s) => s.task);
-
+  // Determine quality based on top score
+  const maxScore = scored[0]?.score || 0;
+  let quality: 'excellent' | 'good' | 'fair' | 'poor';
+  let actualLimit: number;
+  
+  if (maxScore >= 10) {
+    quality = 'excellent';
+    actualLimit = Math.min(limit, 2);
+  } else if (maxScore >= 7) {
+    quality = 'good';
+    actualLimit = Math.min(limit, 3);
+  } else if (maxScore >= 5) {
+    quality = 'fair';
+    actualLimit = 1;
+  } else {
+    quality = 'poor';
+    actualLimit = 0;
+  }
+  
+  // Filter by minimum threshold and signal count
+  const filtered = scored
+    .filter((s) => s.score >= 5 && s.signals >= 2)
+    .slice(0, actualLimit);
+  
+  const relevant = filtered.map((s) => s.task);
+  const reasons = new Map(filtered.map((s) => [s.task.id, s.reasons]));
+  
   // Calculate summary
   const summary = {
     active: data.tasks.filter((t) => t.status === 'in-progress').length,
@@ -386,7 +480,7 @@ export async function recallTasks(
     total: data.tasks.length,
   };
 
-  return { relevant, summary };
+  return { relevant, reasons, summary, quality };
 }
 
 // Legacy init (creates dirs if needed)

@@ -54,6 +54,60 @@ kanban
 }
 ```
 
+## Making Claude Use It
+
+Just installing the MCP isn't enough — Claude needs instructions to use it.
+
+Add a `CLAUDE.md` file to your project root:
+
+```markdown
+## Task Tracking
+Use the cwim-kanban MCP to track all work in this project.
+
+### Workflow
+1. **Before starting**: Call `task_recall` with what you're about to work on
+2. **Starting a task**: Create or move to `in-progress`
+3. **Making progress**: Append notes with discoveries, decisions, or blockers
+4. **Finishing**: Move to `done` and append a summary note
+5. **Blocked**: Move to `blocked` with a note explaining why
+
+### Example
+```
+// Check if we have existing context
+task_recall({ context: "refactoring auth middleware" })
+
+// Create or update task
+task_create({
+  title: "Refactor auth middleware",
+  description: "Extract JWT validation into separate module",
+  status: "in-progress",
+  tags: ["refactor", "auth"]
+})
+
+// Append progress notes
+task_append_note({
+  id: "tf-abc123",
+  note: "Discovered edge case with refresh tokens"
+})
+
+// Mark complete
+task_move({ id: "tf-abc123", status: "done" })
+task_append_note({
+  id: "tf-abc123",
+  note: "Completed: Extracted JWT validation, all tests passing"
+})
+```
+
+### Rules
+- Always check for existing tasks before creating new ones
+- Use tags consistently (e.g., "bug", "feature", "refactor", "docs")
+- Append notes liberally - they build context for future sessions
+- Move tasks to "blocked" immediately when stuck, with explanation
+- Keep task titles concise but descriptive
+```
+
+This makes the behavior automatic — no need to ask Claude every session.
+
 ## Memory Features
 
 ### Smart Context Recall

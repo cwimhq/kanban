@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Column } from './Column.tsx';
 import { NewTaskToast } from './NewTaskToast.tsx';
+import { TaskModal } from './TaskModal.tsx';
 import { STATUS_ORDER } from '../types.ts';
 import { useTasks } from '../hooks/useTasks.ts';
 import type { Task } from '../types.ts';
@@ -31,6 +32,7 @@ function LoadingSkeleton() {
 export function KanbanBoard() {
   const { data, loading, error, refresh, getNewlyMovedTasks } = useTasks();
   const [movedTasks, setMovedTasks] = useState<Set<string>>(new Set());
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const prevTasksRef = useRef<Task[]>([]);
 
   // Detect moved tasks
@@ -94,6 +96,14 @@ export function KanbanBoard() {
 
   const tasks = data?.tasks ?? [];
 
+  const handleTaskDoubleClick = useCallback((task: Task) => {
+    setSelectedTask(task);
+  }, []);
+
+  const handleCloseModal = useCallback(() => {
+    setSelectedTask(null);
+  }, []);
+
   return (
     <>
       <main className="flex-1 overflow-x-auto overflow-y-hidden p-4">
@@ -104,6 +114,7 @@ export function KanbanBoard() {
               status={status}
               tasks={tasks.filter((t) => t.status === status)}
               movedTaskIds={movedTasks}
+              onTaskDoubleClick={handleTaskDoubleClick}
             />
           ))}
         </div>
@@ -123,6 +134,10 @@ export function KanbanBoard() {
       </main>
 
       <NewTaskToast tasks={tasks} />
+
+      {selectedTask && (
+        <TaskModal task={selectedTask} onClose={handleCloseModal} />
+      )}
     </>
   );
 }

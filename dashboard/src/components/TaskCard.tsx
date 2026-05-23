@@ -7,6 +7,7 @@ import { isNewTask } from '../hooks/useTasks.ts';
 interface TaskCardProps {
   task: Task;
   isFlashing: boolean;
+  onDoubleClick?: (task: Task) => void;
 }
 
 const FLASH_CLASSES: Record<TaskStatus, string> = {
@@ -30,7 +31,7 @@ function formatRelativeTime(iso: string): string {
   return `${diffDays}d ago`;
 }
 
-export function TaskCard({ task, isFlashing }: TaskCardProps) {
+export function TaskCard({ task, isFlashing, onDoubleClick }: TaskCardProps) {
   const isNew = isNewTask(task);
   const flashClass = isFlashing ? FLASH_CLASSES[task.status] : '';
 
@@ -50,6 +51,7 @@ export function TaskCard({ task, isFlashing }: TaskCardProps) {
       `}
       style={{ borderLeftColor: STATUS_COLORS[task.status] }}
       tabIndex={0}
+      onDoubleClick={() => onDoubleClick?.(task)}
     >
       {/* Title */}
       <h4 className="text-[13px] font-semibold text-[var(--text-primary)] truncate leading-snug mb-1.5">

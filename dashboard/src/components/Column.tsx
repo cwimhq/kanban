@@ -7,9 +7,10 @@ interface ColumnProps {
   status: TaskStatus;
   tasks: Task[];
   movedTaskIds: Set<string>;
+  onTaskDoubleClick?: (task: Task) => void;
 }
 
-export function Column({ status, tasks, movedTaskIds }: ColumnProps) {
+export function Column({ status, tasks, movedTaskIds, onTaskDoubleClick }: ColumnProps) {
   const color = STATUS_COLORS[status];
 
   return (
@@ -50,6 +51,7 @@ export function Column({ status, tasks, movedTaskIds }: ColumnProps) {
               key={task.id}
               task={task}
               isFlashing={movedTaskIds.has(task.id)}
+              onDoubleClick={onTaskDoubleClick}
             />
           ))
         )}

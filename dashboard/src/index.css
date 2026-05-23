@@ -243,4 +243,20 @@
   .focus-ring:focus-visible {
     @apply ring-2 ring-[var(--accent)] ring-offset-2 ring-offset-[var(--surface-0)];
   }
+
+  /* Modal entrance animation */
+  @keyframes modalIn {
+    from {
+      opacity: 0;
+      transform: scale(0.95) translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+
+  .animate-modal-in {
+    animation: modalIn 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
 }

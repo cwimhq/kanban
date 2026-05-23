@@ -2,13 +2,9 @@
 
 > Your AI's long-term memory. Visualized.
 
-Stop losing context between Claude sessions. CWIM Kanban gives your AI assistant a persistent memory layer with a beautiful dashboard to watch it work.
+**CWIM Kanban gives Claude Code a persistent memory layer.** It remembers what you were working on, recalls context automatically, and shows you everything on a live dashboard.
 
-## The Problem
-
-Ever ask Claude to "continue where we left off" and get a blank stare? That's because Claude has no memory between sessions. Every conversation starts fresh, and complex multi-step work gets lost.
-
-CWIM Kanban fixes this by giving Claude a persistent task memory that survives across sessions.
+No more "what were we doing again?" between sessions.
 
 ## How It Works
 
@@ -43,7 +39,7 @@ kanban
 # Start the dashboard
 kanban
 
-# Add to your Claude Code MCP config (~/.claude/config.json)
+# Add to your Claude Code MCP config (~/.claude/claude.json)
 {
   "mcpServers": {
     "kanban": {

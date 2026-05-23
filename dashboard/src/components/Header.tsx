@@ -42,11 +42,11 @@ export function Header({ data, sessions, onSwitchSession }: HeaderProps) {
   const displayName = activeSession === 'independent' ? 'Independent Mode' : activeSession;
 
   return (
-    <header className="h-14 flex items-center justify-between px-6 border-b border-[#2A2A3A] bg-[#111118] shrink-0">
+    <header className="h-14 flex items-center justify-between px-6 border-b border-[var(--border-default)] bg-[var(--surface-1)] shrink-0">
       {/* Left: Logo + Title */}
       <div className="flex items-center gap-3">
-        <LayoutGrid size={20} className="text-[#22D3EE]" />
-        <span className="text-lg font-semibold text-[#E8E8F0] tracking-tight">
+        <LayoutGrid size={18} className="text-[var(--accent)]" />
+        <span className="text-base font-bold text-[var(--text-primary)] tracking-tight">
           CWIM Kanban
         </span>
         <LiveIndicator />
@@ -56,35 +56,35 @@ export function Header({ data, sessions, onSwitchSession }: HeaderProps) {
       <div className="relative" ref={dropdownRef}>
         <button
           onClick={() => setDropdownOpen(!dropdownOpen)}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-md text-[13px] text-[#8A8AA3] hover:text-[#E8E8F0] hover:bg-[#2A2A3A] transition-colors"
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[13px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-3)] transition-all duration-150"
         >
-          <span>{displayName}</span>
+          <span className="font-medium">{displayName}</span>
           <ChevronDown 
             size={14} 
-            className={`transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} 
+            className={`transition-transform duration-200 ${dropdownOpen ? 'rotate-180' : ''}`} 
           />
         </button>
 
         {dropdownOpen && sessionList.length > 0 && (
-          <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 w-64 bg-[#1A1A24] border border-[#2A2A3A] rounded-lg shadow-xl z-50 py-1">
-            <div className="px-3 py-1.5 text-xs text-[#8A8AA3] uppercase tracking-wider">
+          <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1.5 w-64 bg-[var(--surface-2)] border border-[var(--border-default)] rounded-xl shadow-[var(--shadow-lg)] z-50 py-1 overflow-hidden">
+            <div className="px-3 py-2 text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">
               Sessions
             </div>
             {sessionList.map((session) => (
               <button
                 key={session.name}
                 onClick={() => handleSessionSelect(session.name)}
-                className={`w-full flex items-center gap-2 px-3 py-2 text-[13px] transition-colors ${
+                className={`w-full flex items-center gap-2 px-3 py-2 text-[13px] transition-colors duration-150 ${
                   session.name === activeSession
-                    ? 'text-[#22D3EE] bg-[#22D3EE]/10'
-                    : 'text-[#E8E8F0] hover:bg-[#2A2A3A]'
+                    ? 'text-[var(--accent)] bg-[var(--accent-subtle)]'
+                    : 'text-[var(--text-primary)] hover:bg-[var(--surface-3)]'
                 }`}
               >
-                <span className="flex-1 text-left truncate">
+                <span className="flex-1 text-left truncate font-medium">
                   {session.name === 'independent' ? 'Independent Mode' : session.name}
                 </span>
                 {session.name === activeSession && (
-                  <Check size={14} className="text-[#22D3EE]" />
+                  <Check size={14} className="text-[var(--accent)]" />
                 )}
               </button>
             ))}
@@ -93,7 +93,7 @@ export function Header({ data, sessions, onSwitchSession }: HeaderProps) {
       </div>
 
       {/* Right: Stats */}
-      <div className="flex items-center gap-6">
+      <div className="flex items-center gap-5">
         <StatItem count={counts.todo} label="To Do" color={STATUS_COLORS['todo']} />
         <StatItem count={counts['in-progress']} label="In Progress" color={STATUS_COLORS['in-progress']} />
         <StatItem count={counts.done} label="Done" color={STATUS_COLORS['done']} />
@@ -106,13 +106,13 @@ function StatItem({ count, label, color }: { count: number; label: string; color
   return (
     <div className="flex items-center gap-2">
       <span
-        className="w-2 h-2 rounded-full shrink-0"
+        className="w-1.5 h-1.5 rounded-full shrink-0"
         style={{ backgroundColor: color }}
       />
-      <span className="text-xl font-bold text-[#E8E8F0] tracking-tight">
+      <span className="text-lg font-bold text-[var(--text-primary)] tracking-tight">
         {count}
       </span>
-      <span className="text-xs text-[#8A8AA3] tracking-wide">{label}</span>
+      <span className="text-[11px] text-[var(--text-muted)] font-medium tracking-wide">{label}</span>
     </div>
   );
 }

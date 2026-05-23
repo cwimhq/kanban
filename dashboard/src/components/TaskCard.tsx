@@ -37,25 +37,28 @@ export function TaskCard({ task, isFlashing }: TaskCardProps) {
   return (
     <div
       className={`
-        relative rounded-[10px] p-4 cursor-default
-        bg-[#111118] 
-        shadow-[0_1px_3px_rgba(0,0,0,0.3),0_0_0_1px_rgba(255,255,255,0.03)]
-        hover:bg-[#1A1A24] hover:shadow-[0_4px_12px_rgba(0,0,0,0.4),0_0_0_1px_rgba(255,255,255,0.05)]
+        group relative rounded-xl p-4 cursor-pointer
+        bg-[var(--surface-1)] 
+        shadow-[var(--shadow-sm)]
+        hover:bg-[var(--surface-3)] hover:shadow-[var(--shadow-md)]
+        hover:-translate-y-0.5
         transition-all duration-200 ease-out
-        border-l-[3px]
+        border-l-[3px] border-l-transparent
+        focus-ring
         ${isNew ? 'animate-card-enter' : ''}
         ${flashClass}
       `}
       style={{ borderLeftColor: STATUS_COLORS[task.status] }}
+      tabIndex={0}
     >
       {/* Title */}
-      <h4 className="text-sm font-medium text-[#E8E8F0] truncate leading-snug mb-1.5">
+      <h4 className="text-[13px] font-semibold text-[var(--text-primary)] truncate leading-snug mb-1.5">
         {task.title}
       </h4>
 
       {/* Description */}
       {task.description && (
-        <p className="text-[13px] text-[#8A8AA3] leading-relaxed mb-3 line-clamp-2">
+        <p className="text-xs text-[var(--text-secondary)] leading-relaxed mb-3 line-clamp-2">
           {task.description}
         </p>
       )}
@@ -70,19 +73,19 @@ export function TaskCard({ task, isFlashing }: TaskCardProps) {
       )}
 
       {/* Footer: timestamp + source */}
-      <div className="flex items-center gap-2 text-[11px] text-[#555570]">
+      <div className="flex items-center gap-2 text-[11px] text-[var(--text-muted)]">
         <span>{formatRelativeTime(task.updatedAt)}</span>
-        <span>·</span>
+        <span className="text-[var(--text-subtle)]">·</span>
         <span className="flex items-center gap-1">
           {task.source === 'claude' ? (
             <>
               <Bot size={11} />
-              claude
+              <span>claude</span>
             </>
           ) : (
             <>
               <Hand size={11} />
-              manual
+              <span>manual</span>
             </>
           )}
         </span>

@@ -5,6 +5,29 @@ import { STATUS_ORDER } from '../types.ts';
 import { useTasks } from '../hooks/useTasks.ts';
 import type { Task } from '../types.ts';
 
+function LoadingSkeleton() {
+  return (
+    <div className="flex-1 overflow-x-auto overflow-y-hidden p-4">
+      <div className="flex gap-4 h-full min-w-max">
+        {STATUS_ORDER.map((status) => (
+          <div key={status} className="flex flex-col min-w-[280px] flex-1 rounded-xl bg-[var(--surface-1)] border border-[var(--border-default)] overflow-hidden">
+            <div className="flex items-center gap-2 px-4 h-10 shrink-0 border-b border-[var(--border-subtle)]">
+              <div className="skeleton w-1.5 h-1.5 rounded-full" />
+              <div className="skeleton w-20 h-3" />
+              <div className="skeleton w-6 h-4 rounded-full ml-auto" />
+            </div>
+            <div className="flex-1 p-3 space-y-2">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="skeleton-card" />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function KanbanBoard() {
   const { data, loading, error, refresh, getNewlyMovedTasks } = useTasks();
   const [movedTasks, setMovedTasks] = useState<Set<string>>(new Set());
@@ -49,24 +72,20 @@ export function KanbanBoard() {
       : STATUS_ORDER;
 
   if (loading) {
-    return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="text-[#555570] text-sm">Loading board...</div>
-      </div>
-    );
+    return <LoadingSkeleton />;
   }
 
   if (error) {
     return (
       <div className="flex-1 flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-[#EF4444] text-sm mb-2">Error loading tasks</div>
-          <div className="text-[#555570] text-xs">{error}</div>
+        <div className="text-center max-w-sm">
+          <div className="text-[var(--text-primary)] text-sm font-medium mb-1">Unable to load board</div>
+          <div className="text-[var(--text-muted)] text-xs mb-4">{error}</div>
           <button
             onClick={refresh}
-            className="mt-4 px-3 py-1.5 rounded-md bg-[#1E1E2A] text-[#8A8AA3] text-xs hover:bg-[#27273A] transition-colors"
+            className="px-4 py-2 rounded-lg bg-[var(--surface-3)] text-[var(--text-secondary)] text-xs font-medium hover:bg-[var(--surface-4)] transition-colors"
           >
-            Retry
+            Try again
           </button>
         </div>
       </div>
@@ -90,13 +109,13 @@ export function KanbanBoard() {
         </div>
 
         {/* Keyboard hint */}
-        <div className="fixed bottom-3 right-4 text-[10px] text-[#555570] tracking-wide">
+        <div className="fixed bottom-3 right-4 text-[10px] text-[var(--text-subtle)] tracking-wide">
           Press{' '}
-          <kbd className="px-1 py-0.5 rounded bg-[#1E1E2A] border border-[#2A2A3A] text-[#8A8AA3]">
+          <kbd className="px-1 py-0.5 rounded bg-[var(--surface-3)] border border-[var(--border-default)] text-[var(--text-muted)]">
             1-4
           </kbd>{' '}
           to filter ·{' '}
-          <kbd className="px-1 py-0.5 rounded bg-[#1E1E2A] border border-[#2A2A3A] text-[#8A8AA3]">
+          <kbd className="px-1 py-0.5 rounded bg-[var(--surface-3)] border border-[var(--border-default)] text-[var(--text-muted)]">
             r
           </kbd>{' '}
           to refresh

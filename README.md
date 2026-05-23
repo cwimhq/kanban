@@ -67,33 +67,6 @@ Use the cwim-kanban MCP to track all work in this project.
 4. **Finishing**: Move to `done` and append a summary note
 5. **Blocked**: Move to `blocked` with a note explaining why
 
-### Example
-```
-// Check if we have existing context
-task_recall({ context: "refactoring auth middleware" })
-
-// Create or update task
-task_create({
-  title: "Refactor auth middleware",
-  description: "Extract JWT validation into separate module",
-  status: "in-progress",
-  tags: ["refactor", "auth"]
-})
-
-// Append progress notes
-task_append_note({
-  id: "tf-abc123",
-  note: "Discovered edge case with refresh tokens"
-})
-
-// Mark complete
-task_move({ id: "tf-abc123", status: "done" })
-task_append_note({
-  id: "tf-abc123",
-  note: "Completed: Extracted JWT validation, all tests passing"
-})
-```
-
 ### Rules
 - Always check for existing tasks before creating new ones
 - Use tags consistently (e.g., "bug", "feature", "refactor", "docs")

@@ -69,6 +69,7 @@ Use the cwim-kanban MCP to track all work in this project.
 
 ### Rules
 - Always check for existing tasks before creating new ones
+- **One task per unit of work** - If a request involves multiple distinct steps (e.g., "fix auth and update docs"), create separate tasks for each step instead of one combined task
 - Use tags consistently (e.g., "bug", "feature", "refactor", "docs")
 - Append notes liberally - they build context for future sessions
 - Move tasks to "blocked" immediately when stuck, with explanation

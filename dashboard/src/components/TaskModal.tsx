@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { X, Bot, Hand, Calendar, Clock, Hash } from 'lucide-react';
 import { STATUS_COLORS, STATUS_LABELS } from '../types.ts';
 import type { Task } from '../types.ts';
@@ -23,17 +24,20 @@ export function TaskModal({ task, onClose }: TaskModalProps) {
   const color = STATUS_COLORS[task.status];
 
   // Close on escape key
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      onClose();
-    }
-  };
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       onClick={onClose}
-      onKeyDown={handleKeyDown}
       role="dialog"
       aria-modal="true"
     >

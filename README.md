@@ -63,10 +63,12 @@ Add to your OpenCode config (`opencode.json` in project root or `~/.config/openc
 
 ```json
 {
+  "$schema": "https://opencode.ai/config.json",
   "mcp": {
     "kanban": {
-      "command": "npx",
-      "args": ["@cwim/kanban", "mcp"]
+      "type": "local",
+      "command": ["npx", "-y", "@cwim/kanban", "mcp"],
+      "enabled": true
     }
   }
 }

@@ -25,10 +25,33 @@ function detectAgent(): 'claude' | 'opencode' {
   if (process.env.CLAUDE_CODE) return 'claude';
   if (process.env.OPENCODE) return 'opencode';
   
-  const parentProcess = process.ppid ? require('child_process').execSync(`ps -p ${process.ppid} -o comm=`, { encoding: 'utf8' }).trim() : '';
-  if (parentProcess.includes('claude')) return 'claude';
-  if (parentProcess.includes('opencode')) return 'opencode';
+  // Try to detect parent process name cross-platform
+  if (process.ppid) {
+    try {
+      const { execSync } = require('child_process');
+      let parentProcess = '';
+      
+      if (process.platform === 'win32') {
+        // Windows: use wmic or tasklist
+        try {
+          parentProcess = execSync(`wmic process where "ProcessId=${process.ppid}" get Name /value`, { encoding: 'utf8', timeout: 5000 });
+        } catch {
+          // Fallback to tasklist
+          parentProcess = execSync(`tasklist /FI "PID eq ${process.ppid}" /FO CSV /NH`, { encoding: 'utf8', timeout: 5000 });
+        }
+      } else {
+        // Unix-like (macOS, Linux)
+        parentProcess = execSync(`ps -p ${process.ppid} -o comm=`, { encoding: 'utf8', timeout: 5000 }).trim();
+      }
+      
+      if (parentProcess.toLowerCase().includes('claude')) return 'claude';
+      if (parentProcess.toLowerCase().includes('opencode')) return 'opencode';
+    } catch {
+      // Ignore errors from process detection
+    }
+  }
   
+  // Default fallback
   return 'claude';
 }
 

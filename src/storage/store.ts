@@ -1,15 +1,20 @@
-import { promises as fs, existsSync, mkdirSync } from 'fs';
-import * as path from 'path';
-import * as os from 'os';
-import { execSync } from 'child_process';
-import type { Task, TaskFlowData, TaskStatus, SessionInfo } from '../types.js';
+import { promises as fs, existsSync, mkdirSync } from "fs";
+import * as path from "path";
+import * as os from "os";
+import { execSync } from "child_process";
+import type { Task, TaskFlowData, TaskStatus, SessionInfo } from "../types.js";
 
-const KANBAN_DIR = path.join(os.homedir(), '.kanban');
-const SESSIONS_DIR = path.join(KANBAN_DIR, 'sessions');
-const ACTIVE_SESSION_FILE = path.join(KANBAN_DIR, 'active-session.json');
-const CLAUDE_PROJECTS_DIR = path.join(os.homedir(), '.claude', 'projects');
-const OPENCODE_CONFIG_DIR = path.join(os.homedir(), '.config', 'opencode');
-const OPENCODE_DATA_DIR = path.join(os.homedir(), '.local', 'share', 'opencode');
+const KANBAN_DIR = path.join(os.homedir(), ".kanban");
+const SESSIONS_DIR = path.join(KANBAN_DIR, "sessions");
+const ACTIVE_SESSION_FILE = path.join(KANBAN_DIR, "active-session.json");
+const CLAUDE_PROJECTS_DIR = path.join(os.homedir(), ".claude", "projects");
+const OPENCODE_CONFIG_DIR = path.join(os.homedir(), ".config", "opencode");
+const OPENCODE_DATA_DIR = path.join(
+  os.homedir(),
+  ".local",
+  "share",
+  "opencode",
+);
 
 function getDefaultData(): TaskFlowData {
   return {
@@ -30,7 +35,7 @@ function getSessionDir(sessionName: string): string {
 }
 
 function getSessionDataFile(sessionName: string): string {
-  return path.join(getSessionDir(sessionName), 'tasks.json');
+  return path.join(getSessionDir(sessionName), "tasks.json");
 }
 
 // Active session management
@@ -43,7 +48,7 @@ interface ActiveSession {
 export async function getActiveSession(): Promise<string | undefined> {
   try {
     if (!existsSync(ACTIVE_SESSION_FILE)) return undefined;
-    const raw = await fs.readFile(ACTIVE_SESSION_FILE, 'utf-8');
+    const raw = await fs.readFile(ACTIVE_SESSION_FILE, "utf-8");
     const active: ActiveSession = JSON.parse(raw);
     return active.name;
   } catch {
@@ -57,7 +62,11 @@ export async function setActiveSession(sessionName: string): Promise<void> {
     name: sessionName,
     setAt: new Date().toISOString(),
   };
-  await fs.writeFile(ACTIVE_SESSION_FILE, JSON.stringify(active, null, 2), 'utf-8');
+  await fs.writeFile(
+    ACTIVE_SESSION_FILE,
+    JSON.stringify(active, null, 2),
+    "utf-8",
+  );
 }
 
 // Session detection
@@ -65,14 +74,16 @@ export async function setActiveSession(sessionName: string): Promise<void> {
 async function detectClaudeSessions(): Promise<SessionInfo[]> {
   try {
     if (!existsSync(CLAUDE_PROJECTS_DIR)) return [];
-    const entries = await fs.readdir(CLAUDE_PROJECTS_DIR, { withFileTypes: true });
+    const entries = await fs.readdir(CLAUDE_PROJECTS_DIR, {
+      withFileTypes: true,
+    });
     return entries
       .filter((e) => e.isDirectory())
       .map((e) => ({
         name: e.name,
         path: path.join(CLAUDE_PROJECTS_DIR, e.name),
         detectedAt: new Date().toISOString(),
-        source: 'claude' as const,
+        source: "claude" as const,
       }));
   } catch {
     return [];
@@ -80,11 +91,24 @@ async function detectClaudeSessions(): Promise<SessionInfo[]> {
 }
 
 const OPENCODE_CONFIG_EXCLUDES = new Set([
-  'agents', 'commands', 'modes', 'plugins', 'skills', 'tools', 'themes', 'node_modules'
+  "agents",
+  "command",
+  "commands",
+  "modes",
+  "plugins",
+  "skills",
+  "tools",
+  "themes",
+  "node_modules",
 ]);
 
 const OPENCODE_DATA_EXCLUDES = new Set([
-  'bin', 'log', 'repos', 'snapshot', 'storage', 'tool-output'
+  "bin",
+  "log",
+  "repos",
+  "snapshot",
+  "storage",
+  "tool-output",
 ]);
 
 const ALL_INTERNAL_NAMES = new Set([
@@ -104,7 +128,7 @@ async function detectOpencodeSessions(): Promise<SessionInfo[]> {
 }
 
 async function queryOpencodeDatabase(): Promise<SessionInfo[]> {
-  const dbPath = path.join(OPENCODE_DATA_DIR, 'opencode.db');
+  const dbPath = path.join(OPENCODE_DATA_DIR, "opencode.db");
   if (!existsSync(dbPath)) {
     return [];
   }
@@ -115,13 +139,16 @@ async function queryOpencodeDatabase(): Promise<SessionInfo[]> {
     const query = `SELECT id, worktree, name, time_updated FROM project WHERE worktree IS NOT NULL AND worktree != '/' ORDER BY time_updated DESC;`;
 
     // Write query to temp file to avoid shell escaping issues with paths
-    const tempQueryFile = path.join(os.tmpdir(), `opencode-query-${Date.now()}.sql`);
-    await fs.writeFile(tempQueryFile, query, 'utf-8');
+    const tempQueryFile = path.join(
+      os.tmpdir(),
+      `opencode-query-${Date.now()}.sql`,
+    );
+    await fs.writeFile(tempQueryFile, query, "utf-8");
 
     let result: string;
     try {
       result = execSync(`sqlite3 "${dbPath}" < "${tempQueryFile}"`, {
-        encoding: 'utf8',
+        encoding: "utf8",
         timeout: 10000,
       });
     } finally {
@@ -136,13 +163,13 @@ async function queryOpencodeDatabase(): Promise<SessionInfo[]> {
     const sessions: SessionInfo[] = [];
     const seenPaths = new Set<string>();
 
-    for (const line of result.trim().split('\n')) {
+    for (const line of result.trim().split("\n")) {
       if (!line.trim()) continue;
-      const parts = line.split('|');
+      const parts = line.split("|");
       if (parts.length < 4) continue;
 
       const [, worktree, name, timeUpdated] = parts;
-      if (!worktree || worktree === '/') continue;
+      if (!worktree || worktree === "/") continue;
 
       // Normalize path for deduplication
       const normalizedPath = path.normalize(worktree);
@@ -156,7 +183,7 @@ async function queryOpencodeDatabase(): Promise<SessionInfo[]> {
         name: sessionName,
         path: normalizedPath,
         detectedAt: new Date(parseInt(timeUpdated)).toISOString(),
-        source: 'opencode' as const,
+        source: "opencode" as const,
       });
     }
 
@@ -173,14 +200,16 @@ async function detectOpencodeSessionsFromDirectories(): Promise<SessionInfo[]> {
   // Check ~/.config/opencode/ for project directories
   try {
     if (existsSync(OPENCODE_CONFIG_DIR)) {
-      const entries = await fs.readdir(OPENCODE_CONFIG_DIR, { withFileTypes: true });
+      const entries = await fs.readdir(OPENCODE_CONFIG_DIR, {
+        withFileTypes: true,
+      });
       for (const entry of entries) {
         if (entry.isDirectory() && !OPENCODE_CONFIG_EXCLUDES.has(entry.name)) {
           sessions.push({
             name: entry.name,
             path: path.join(OPENCODE_CONFIG_DIR, entry.name),
             detectedAt: new Date().toISOString(),
-            source: 'opencode' as const,
+            source: "opencode" as const,
           });
         }
       }
@@ -192,17 +221,19 @@ async function detectOpencodeSessionsFromDirectories(): Promise<SessionInfo[]> {
   // Check ~/.local/share/opencode/ for session data
   try {
     if (existsSync(OPENCODE_DATA_DIR)) {
-      const entries = await fs.readdir(OPENCODE_DATA_DIR, { withFileTypes: true });
+      const entries = await fs.readdir(OPENCODE_DATA_DIR, {
+        withFileTypes: true,
+      });
       for (const entry of entries) {
         if (entry.isDirectory() && !OPENCODE_DATA_EXCLUDES.has(entry.name)) {
           const sessionName = entry.name;
           // Only add if not already found
-          if (!sessions.some(s => s.name === sessionName)) {
+          if (!sessions.some((s) => s.name === sessionName)) {
             sessions.push({
               name: sessionName,
               path: path.join(OPENCODE_DATA_DIR, entry.name),
               detectedAt: new Date().toISOString(),
-              source: 'opencode' as const,
+              source: "opencode" as const,
             });
           }
         }
@@ -215,31 +246,71 @@ async function detectOpencodeSessionsFromDirectories(): Promise<SessionInfo[]> {
   return sessions;
 }
 
+function detectGitRepo(): { name: string; path: string } | undefined {
+  try {
+    const cwd = process.cwd();
+    const gitRoot = execSync("git rev-parse --show-toplevel", {
+      cwd,
+      encoding: "utf8",
+      timeout: 5000,
+      stdio: ["pipe", "pipe", "ignore"],
+    }).trim();
+
+    if (!gitRoot) return undefined;
+
+    const normalizedPath = path.normalize(gitRoot);
+    const name = path.basename(normalizedPath);
+
+    return { name, path: normalizedPath };
+  } catch {
+    return undefined;
+  }
+}
+
+async function detectGitRepoSessions(): Promise<SessionInfo[]> {
+  const repo = detectGitRepo();
+  if (!repo) return [];
+
+  return [
+    {
+      name: repo.name,
+      path: repo.path,
+      detectedAt: new Date().toISOString(),
+      source: "git" as const,
+    },
+  ];
+}
+
 export async function detectSessions(): Promise<SessionInfo[]> {
   try {
-    // Detect sessions from both Claude and opencode
-    const [claudeSessions, opencodeSessions] = await Promise.all([
+    // Detect sessions from all sources: Git (CWD), Claude, and OpenCode
+    const [gitSessions, claudeSessions, opencodeSessions] = await Promise.all([
+      detectGitRepoSessions(),
       detectClaudeSessions(),
       detectOpencodeSessions(),
     ]);
-    
+
     // Merge and deduplicate by name
+    // Priority: Git > Claude > OpenCode
     const sessionMap = new Map<string, SessionInfo>();
-    
+
+    for (const session of opencodeSessions) {
+      sessionMap.set(session.name, session);
+    }
+
     for (const session of claudeSessions) {
       sessionMap.set(session.name, session);
     }
-    
-    for (const session of opencodeSessions) {
-      if (!sessionMap.has(session.name)) {
-        sessionMap.set(session.name, session);
-      }
+
+    // Git sessions take highest priority - they reflect the actual working directory
+    for (const session of gitSessions) {
+      sessionMap.set(session.name, session);
     }
-    
+
     const sessions = Array.from(sessionMap.values());
-    
+
     if (sessions.length === 0) return [];
-    
+
     // Sort by most recently modified
     const stats = await Promise.all(
       sessions.map(async (s) => {
@@ -249,10 +320,10 @@ export async function detectSessions(): Promise<SessionInfo[]> {
         } catch {
           return { ...s, mtime: new Date(0) };
         }
-      })
+      }),
     );
     stats.sort((a, b) => b.mtime.getTime() - a.mtime.getTime());
-    
+
     return stats.map((s) => ({
       name: s.name,
       path: s.path,
@@ -266,13 +337,21 @@ export async function detectSessions(): Promise<SessionInfo[]> {
 
 export async function detectLatestSession(): Promise<SessionInfo | undefined> {
   const sessions = await detectSessions();
+
+  // If we're in a git repo, prefer the git-detected session
+  // even if it's not the most recently modified
+  const gitSession = sessions.find((s) => s.source === "git");
+  if (gitSession) {
+    return gitSession;
+  }
+
   return sessions[0];
 }
 
 export async function listAllSessions(): Promise<SessionInfo[]> {
   const detected = await detectSessions();
   const detectedNames = new Set(detected.map((s) => s.name));
-  
+
   // Also include any stored sessions that might not be currently detected
   // (e.g., old projects that were removed from .claude/projects)
   const storedSessions: SessionInfo[] = [];
@@ -282,14 +361,14 @@ export async function listAllSessions(): Promise<SessionInfo[]> {
       if (
         entry.isDirectory() &&
         !detectedNames.has(entry.name) &&
-        entry.name !== 'independent' &&
+        entry.name !== "independent" &&
         !ALL_INTERNAL_NAMES.has(entry.name)
       ) {
         storedSessions.push({
           name: entry.name,
           path: getSessionDir(entry.name),
           detectedAt: new Date().toISOString(),
-          source: 'manual' as const,
+          source: "manual" as const,
         });
       }
     }
@@ -300,13 +379,13 @@ export async function listAllSessions(): Promise<SessionInfo[]> {
     ...detected,
     ...storedSessions,
     {
-      name: 'independent',
-      path: getSessionDir('independent'),
+      name: "independent",
+      path: getSessionDir("independent"),
       detectedAt: new Date().toISOString(),
-      source: 'independent' as const,
+      source: "independent" as const,
     },
   ];
-  
+
   return allSessions;
 }
 
@@ -314,17 +393,17 @@ export async function listAllSessions(): Promise<SessionInfo[]> {
 export async function getCurrentSessionName(): Promise<string> {
   const active = await getActiveSession();
   if (active) return active;
-  
+
   // Auto-detect and set
   const latest = await detectLatestSession();
   if (latest) {
     await setActiveSession(latest.name);
     return latest.name;
   }
-  
+
   // Fallback to independent
-  await setActiveSession('independent');
-  return 'independent';
+  await setActiveSession("independent");
+  return "independent";
 }
 
 // Per-session data operations
@@ -332,9 +411,9 @@ export async function getCurrentSessionName(): Promise<string> {
 async function readSessionData(sessionName: string): Promise<TaskFlowData> {
   const dataFile = getSessionDataFile(sessionName);
   ensureDir(getSessionDir(sessionName));
-  
+
   try {
-    const raw = await fs.readFile(dataFile, 'utf-8');
+    const raw = await fs.readFile(dataFile, "utf-8");
     return JSON.parse(raw) as TaskFlowData;
   } catch {
     const defaultData = getDefaultData();
@@ -343,12 +422,15 @@ async function readSessionData(sessionName: string): Promise<TaskFlowData> {
   }
 }
 
-async function writeSessionData(sessionName: string, data: TaskFlowData): Promise<void> {
+async function writeSessionData(
+  sessionName: string,
+  data: TaskFlowData,
+): Promise<void> {
   const dataFile = getSessionDataFile(sessionName);
   ensureDir(getSessionDir(sessionName));
   data.updatedAt = new Date().toISOString();
-  const tempFile = dataFile + '.tmp';
-  await fs.writeFile(tempFile, JSON.stringify(data, null, 2), 'utf-8');
+  const tempFile = dataFile + ".tmp";
+  await fs.writeFile(tempFile, JSON.stringify(data, null, 2), "utf-8");
   await fs.rename(tempFile, dataFile);
 }
 
@@ -356,9 +438,9 @@ async function writeSessionData(sessionName: string, data: TaskFlowData): Promis
 
 export async function listTasks(
   sessionName?: string,
-  filter?: { status?: TaskStatus; tag?: string; query?: string }
+  filter?: { status?: TaskStatus; tag?: string; query?: string },
 ): Promise<Task[]> {
-  const targetSession = sessionName ?? await getCurrentSessionName();
+  const targetSession = sessionName ?? (await getCurrentSessionName());
   const data = await readSessionData(targetSession);
   let tasks = data.tasks;
   if (filter?.status) {
@@ -369,16 +451,20 @@ export async function listTasks(
   }
   if (filter?.query) {
     const q = filter.query.toLowerCase();
-    tasks = tasks.filter((t) =>
-      t.title.toLowerCase().includes(q) ||
-      (t.description?.toLowerCase().includes(q) ?? false)
+    tasks = tasks.filter(
+      (t) =>
+        t.title.toLowerCase().includes(q) ||
+        (t.description?.toLowerCase().includes(q) ?? false),
     );
   }
   return tasks;
 }
 
-export async function getTask(id: string, sessionName?: string): Promise<Task | undefined> {
-  const targetSession = sessionName ?? await getCurrentSessionName();
+export async function getTask(
+  id: string,
+  sessionName?: string,
+): Promise<Task | undefined> {
+  const targetSession = sessionName ?? (await getCurrentSessionName());
   const data = await readSessionData(targetSession);
   return data.tasks.find((t) => t.id === id);
 }
@@ -389,20 +475,20 @@ export async function createTask(
     description?: string;
     status?: TaskStatus;
     tags?: string[];
-    source?: 'claude' | 'opencode' | 'manual';
+    source?: "claude" | "opencode" | "manual";
   },
-  sessionName?: string
+  sessionName?: string,
 ): Promise<Task> {
-  const targetSession = sessionName ?? await getCurrentSessionName();
+  const targetSession = sessionName ?? (await getCurrentSessionName());
   const data = await readSessionData(targetSession);
 
   const task: Task = {
     id: generateId(),
     title: input.title,
     description: input.description,
-    status: input.status ?? 'todo',
+    status: input.status ?? "todo",
     tags: input.tags ?? [],
-    source: input.source ?? 'manual',
+    source: input.source ?? "manual",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -414,10 +500,10 @@ export async function createTask(
 
 export async function updateTask(
   id: string,
-  input: Partial<Pick<Task, 'title' | 'description' | 'status' | 'tags'>>,
-  sessionName?: string
+  input: Partial<Pick<Task, "title" | "description" | "status" | "tags">>,
+  sessionName?: string,
 ): Promise<Task | undefined> {
-  const targetSession = sessionName ?? await getCurrentSessionName();
+  const targetSession = sessionName ?? (await getCurrentSessionName());
   const data = await readSessionData(targetSession);
   const idx = data.tasks.findIndex((t) => t.id === id);
   if (idx === -1) return undefined;
@@ -434,15 +520,18 @@ export async function updateTask(
 }
 
 export async function moveTask(
-  id: string, 
+  id: string,
   status: TaskStatus,
-  sessionName?: string
+  sessionName?: string,
 ): Promise<Task | undefined> {
   return updateTask(id, { status }, sessionName);
 }
 
-export async function deleteTask(id: string, sessionName?: string): Promise<boolean> {
-  const targetSession = sessionName ?? await getCurrentSessionName();
+export async function deleteTask(
+  id: string,
+  sessionName?: string,
+): Promise<boolean> {
+  const targetSession = sessionName ?? (await getCurrentSessionName());
   const data = await readSessionData(targetSession);
   const initialLen = data.tasks.length;
   data.tasks = data.tasks.filter((t) => t.id !== id);
@@ -454,9 +543,9 @@ export async function deleteTask(id: string, sessionName?: string): Promise<bool
 export async function appendNote(
   id: string,
   note: string,
-  sessionName?: string
+  sessionName?: string,
 ): Promise<Task | undefined> {
-  const targetSession = sessionName ?? await getCurrentSessionName();
+  const targetSession = sessionName ?? (await getCurrentSessionName());
   const data = await readSessionData(targetSession);
   const idx = data.tasks.findIndex((t) => t.id === id);
   if (idx === -1) return undefined;
@@ -474,16 +563,16 @@ export async function appendNote(
 }
 
 export async function getAllData(sessionName?: string): Promise<TaskFlowData> {
-  const targetSession = sessionName ?? await getCurrentSessionName();
+  const targetSession = sessionName ?? (await getCurrentSessionName());
   const data = await readSessionData(targetSession);
-  
+
   // Attach session info
   const sessions = await listAllSessions();
   const sessionInfo = sessions.find((s) => s.name === targetSession);
   if (sessionInfo) {
     data.session = sessionInfo;
   }
-  
+
   return data;
 }
 
@@ -510,11 +599,132 @@ interface RecallResult {
     blocked: number;
     total: number;
   };
-  quality: 'excellent' | 'good' | 'fair' | 'poor';
+  quality: "excellent" | "good" | "fair" | "poor";
 }
 
 const STOP_WORDS = new Set([
-  'the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can', 'had', 'her', 'was', 'one', 'our', 'out', 'day', 'get', 'has', 'him', 'his', 'how', 'its', 'may', 'new', 'now', 'old', 'see', 'two', 'who', 'boy', 'did', 'she', 'use', 'her', 'way', 'many', 'oil', 'sit', 'set', 'run', 'eat', 'far', 'sea', 'eye', 'ago', 'off', 'too', 'any', 'say', 'man', 'try', 'ask', 'end', 'why', 'let', 'put', 'say', 'she', 'try', 'way', 'own', 'say', 'too', 'old', 'tell', 'very', 'when', 'much', 'would', 'there', 'their', 'what', 'said', 'each', 'which', 'will', 'about', 'could', 'other', 'after', 'first', 'never', 'these', 'think', 'where', 'being', 'every', 'great', 'might', 'shall', 'still', 'those', 'while', 'this', 'that', 'with', 'have', 'from', 'they', 'know', 'want', 'been', 'good', 'much', 'some', 'time', 'very', 'when', 'come', 'here', 'just', 'like', 'long', 'make', 'many', 'over', 'such', 'take', 'than', 'them', 'well', 'were'
+  "the",
+  "and",
+  "for",
+  "are",
+  "but",
+  "not",
+  "you",
+  "all",
+  "can",
+  "had",
+  "her",
+  "was",
+  "one",
+  "our",
+  "out",
+  "day",
+  "get",
+  "has",
+  "him",
+  "his",
+  "how",
+  "its",
+  "may",
+  "new",
+  "now",
+  "old",
+  "see",
+  "two",
+  "who",
+  "boy",
+  "did",
+  "she",
+  "use",
+  "her",
+  "way",
+  "many",
+  "oil",
+  "sit",
+  "set",
+  "run",
+  "eat",
+  "far",
+  "sea",
+  "eye",
+  "ago",
+  "off",
+  "too",
+  "any",
+  "say",
+  "man",
+  "try",
+  "ask",
+  "end",
+  "why",
+  "let",
+  "put",
+  "say",
+  "she",
+  "try",
+  "way",
+  "own",
+  "say",
+  "too",
+  "old",
+  "tell",
+  "very",
+  "when",
+  "much",
+  "would",
+  "there",
+  "their",
+  "what",
+  "said",
+  "each",
+  "which",
+  "will",
+  "about",
+  "could",
+  "other",
+  "after",
+  "first",
+  "never",
+  "these",
+  "think",
+  "where",
+  "being",
+  "every",
+  "great",
+  "might",
+  "shall",
+  "still",
+  "those",
+  "while",
+  "this",
+  "that",
+  "with",
+  "have",
+  "from",
+  "they",
+  "know",
+  "want",
+  "been",
+  "good",
+  "much",
+  "some",
+  "time",
+  "very",
+  "when",
+  "come",
+  "here",
+  "just",
+  "like",
+  "long",
+  "make",
+  "many",
+  "over",
+  "such",
+  "take",
+  "than",
+  "them",
+  "well",
+  "were",
 ]);
 
 function extractKeywords(text: string): string[] {
@@ -528,9 +738,9 @@ function extractKeywords(text: string): string[] {
 function getTaskFields(task: Task): { [key: string]: string } {
   return {
     title: task.title.toLowerCase(),
-    tags: task.tags.join(' ').toLowerCase(),
-    description: (task.description || '').toLowerCase(),
-    notes: (task.notes || []).join(' ').toLowerCase(),
+    tags: task.tags.join(" ").toLowerCase(),
+    description: (task.description || "").toLowerCase(),
+    notes: (task.notes || []).join(" ").toLowerCase(),
   };
 }
 
@@ -539,47 +749,47 @@ function scoreTask(task: Task, queryWords: string[]): ScoredTask {
   let signals = 0;
   const reasons: MatchReason[] = [];
   const fields = getTaskFields(task);
-  
+
   // Title matches (highest weight: 5)
   for (const word of queryWords) {
     if (fields.title.includes(word)) {
       score += 5;
       signals++;
-      reasons.push({ field: 'title', matched: word });
+      reasons.push({ field: "title", matched: word });
       break; // Only count title once per word
     }
   }
-  
+
   // Tag matches (weight: 4)
   for (const word of queryWords) {
     if (fields.tags.includes(word)) {
       score += 4;
       signals++;
-      reasons.push({ field: 'tag', matched: word });
+      reasons.push({ field: "tag", matched: word });
       break;
     }
   }
-  
+
   // Description matches (weight: 2)
   for (const word of queryWords) {
     if (fields.description.includes(word)) {
       score += 2;
       signals++;
-      reasons.push({ field: 'description', matched: word });
+      reasons.push({ field: "description", matched: word });
       break;
     }
   }
-  
+
   // Notes matches (lowest weight: 1)
   for (const word of queryWords) {
     if (fields.notes.includes(word)) {
       score += 1;
       signals++;
-      reasons.push({ field: 'notes', matched: word });
+      reasons.push({ field: "notes", matched: word });
       break;
     }
   }
-  
+
   // Recency boost
   const age = Date.now() - new Date(task.updatedAt).getTime();
   const hoursOld = age / (1000 * 60 * 60);
@@ -588,76 +798,76 @@ function scoreTask(task: Task, queryWords: string[]): ScoredTask {
   } else if (hoursOld < 24) {
     score += 1;
   }
-  
+
   // Status boost
-  if (task.status === 'in-progress') {
+  if (task.status === "in-progress") {
     score += 2;
     signals++;
-  } else if (task.status === 'blocked') {
+  } else if (task.status === "blocked") {
     score += 1;
     signals++;
   }
-  
+
   return { task, score, signals, reasons };
 }
 
 export async function recallTasks(
   context: string,
   limit: number = 5,
-  sessionName?: string
+  sessionName?: string,
 ): Promise<RecallResult> {
-  const targetSession = sessionName ?? await getCurrentSessionName();
+  const targetSession = sessionName ?? (await getCurrentSessionName());
   const data = await readSessionData(targetSession);
-  
+
   if (data.tasks.length === 0) {
     return {
       relevant: [],
       reasons: new Map(),
       summary: { active: 0, done: 0, blocked: 0, total: 0 },
-      quality: 'poor',
+      quality: "poor",
     };
   }
 
   const queryWords = extractKeywords(context);
-  
+
   // Score all tasks
   const scored = data.tasks.map((task) => scoreTask(task, queryWords));
-  
+
   // Sort by score descending
   scored.sort((a, b) => b.score - a.score);
-  
+
   // Determine quality based on top score
   const maxScore = scored[0]?.score || 0;
-  let quality: 'excellent' | 'good' | 'fair' | 'poor';
+  let quality: "excellent" | "good" | "fair" | "poor";
   let actualLimit: number;
-  
+
   if (maxScore >= 10) {
-    quality = 'excellent';
+    quality = "excellent";
     actualLimit = Math.min(limit, 2);
   } else if (maxScore >= 7) {
-    quality = 'good';
+    quality = "good";
     actualLimit = Math.min(limit, 3);
   } else if (maxScore >= 5) {
-    quality = 'fair';
+    quality = "fair";
     actualLimit = 1;
   } else {
-    quality = 'poor';
+    quality = "poor";
     actualLimit = 0;
   }
-  
+
   // Filter by minimum threshold and signal count
   const filtered = scored
     .filter((s) => s.score >= 5 && s.signals >= 2)
     .slice(0, actualLimit);
-  
+
   const relevant = filtered.map((s) => s.task);
   const reasons = new Map(filtered.map((s) => [s.task.id, s.reasons]));
-  
+
   // Calculate summary
   const summary = {
-    active: data.tasks.filter((t) => t.status === 'in-progress').length,
-    done: data.tasks.filter((t) => t.status === 'done').length,
-    blocked: data.tasks.filter((t) => t.status === 'blocked').length,
+    active: data.tasks.filter((t) => t.status === "in-progress").length,
+    done: data.tasks.filter((t) => t.status === "done").length,
+    blocked: data.tasks.filter((t) => t.status === "blocked").length,
     total: data.tasks.length,
   };
 

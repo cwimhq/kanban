@@ -4,7 +4,7 @@
 
 **CWIM Kanban gives your AI agent a persistent memory layer.** It remembers what you were working on, recalls context automatically, and shows you everything on a live dashboard.
 
-Works with **Claude Code** and **OpenCode**.
+Works with **Claude Code**, **OpenCode**, and any **Git repository**.
 
 No more "what were we doing again?" between sessions.
 
@@ -84,9 +84,11 @@ Add a `CLAUDE.md` file to your project root:
 
 ```markdown
 ## Task Tracking
+
 Use the cwim-kanban MCP to track all work in this project.
 
 ### Workflow
+
 1. **Before starting**: Call `task_recall` with what you're about to work on
 2. **Starting a task**: Create or move to `in-progress`
 3. **Making progress**: Append notes with discoveries, decisions, or blockers
@@ -94,6 +96,7 @@ Use the cwim-kanban MCP to track all work in this project.
 5. **Blocked**: Move to `blocked` with a note explaining why
 
 ### Rules
+
 - Always check for existing tasks before creating new ones
 - **One task per unit of work** - If a request involves multiple distinct steps (e.g., "fix auth and update docs"), create separate tasks for each step instead of one combined task
 - **Always verify the active session before creating tasks** - Call `session_list` first, confirm the active session matches the current project, and call `session_switch` if it doesn't
@@ -111,9 +114,11 @@ Add an `AGENTS.md` file to your project root (or add to your existing one):
 
 ```markdown
 ## Task Tracking
+
 Use the cwim-kanban MCP to track all work in this project.
 
 ### Workflow
+
 1. **Before starting**: Call `task_recall` with what you're about to work on
 2. **Starting a task**: Create or move to `in-progress`
 3. **Making progress**: Append notes with discoveries, decisions, or blockers
@@ -121,6 +126,7 @@ Use the cwim-kanban MCP to track all work in this project.
 5. **Blocked**: Move to `blocked` with a note explaining why
 
 ### Rules
+
 - Always check for existing tasks before creating new ones
 - **One task per unit of work** - If a request involves multiple distinct steps (e.g., "fix auth and update docs"), create separate tasks for each step instead of one combined task
 - **Always verify the active session before creating tasks** - Call `session_list` first, confirm the active session matches the current project, and call `session_switch` if it doesn't
@@ -161,9 +167,12 @@ Each note is timestamped and preserved. The task grows smarter as you work.
 
 Each project gets its own memory space. Work on multiple projects without context bleeding:
 
+- **Auto-detected from Git repositories** - Automatically binds to the current git repo when you `cd` into it
 - Auto-detected from `~/.claude/projects/` (Claude Code) and `~/.config/opencode/` (OpenCode)
 - Switch between sessions via dashboard, CLI, or MCP
 - "Independent Mode" for non-AI work
+
+**Git Integration**: When you run kanban commands inside a git repository, it automatically detects the repo and uses it as the session. No manual session switching needed - just `cd` into your project and start tracking tasks.
 
 ### Keyword Search
 
@@ -181,27 +190,28 @@ While your AI works in the background, watch progress in real time:
 - **4 columns** - To Do, In Progress, Done, Blocked
 - **Session switching** - Dropdown to browse projects
 - **Tag support** - Categorize tasks with badges
-- **Source tracking** - Distinguish AI-created vs manual tasks
+- **Source tracking** - Distinguish AI-created vs manual tasks vs git-detected sessions
 - **Keyboard shortcuts** - `r` to refresh, `1-4` to filter columns
 
 ## MCP Tools
 
-| Tool | Purpose |
-|------|---------|
-| `task_recall` | Intelligently recall relevant task context |
-| `task_create` | Create a new task card |
-| `task_append_note` | Append timestamped note to a task |
-| `task_update` | Edit task title, description, tags |
-| `task_move` | Move a task to another column |
-| `task_delete` | Remove a task |
-| `task_list` | List tasks (optionally filtered/search) |
-| `task_get` | Show details of a specific task |
-| `session_list` | List all available sessions |
-| `session_switch` | Switch to a different session |
+| Tool               | Purpose                                    |
+| ------------------ | ------------------------------------------ |
+| `task_recall`      | Intelligently recall relevant task context |
+| `task_create`      | Create a new task card                     |
+| `task_append_note` | Append timestamped note to a task          |
+| `task_update`      | Edit task title, description, tags         |
+| `task_move`        | Move a task to another column              |
+| `task_delete`      | Remove a task                              |
+| `task_list`        | List tasks (optionally filtered/search)    |
+| `task_get`         | Show details of a specific task            |
+| `session_list`     | List all available sessions                |
+| `session_switch`   | Switch to a different session              |
 
 ## CLI Commands
 
 ### Launch Dashboard
+
 ```bash
 kanban                    # Start dashboard and open browser
 kanban --port 8080        # Custom port
@@ -209,12 +219,14 @@ kanban --no-open          # Don't auto-open browser
 ```
 
 ### Memory Operations
+
 ```bash
 kanban recall "auth"      # Recall relevant tasks
 kanban note tf-abc123 "Edge case found"  # Append note
 ```
 
 ### Task Management
+
 ```bash
 kanban add "Fix auth" -d "JWT validation" -t bug,auth
 kanban list --query "auth"
@@ -224,6 +236,7 @@ kanban remove tf-abc123
 ```
 
 ### Session Management
+
 ```bash
 kanban sessions           # List all sessions
 kanban switch my-project  # Change active session
@@ -263,6 +276,7 @@ Claude Code → MCP Server (stdio) → session tasks.json ← HTTP Server ← Da
 ## Requirements
 
 - Node.js 18+
+- Git (optional - for automatic repo detection)
 - Claude Code or OpenCode (optional - dashboard works independently)
 
 ## License

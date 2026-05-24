@@ -1,4 +1,4 @@
-export type TaskStatus = 'todo' | 'in-progress' | 'done' | 'blocked';
+export type TaskStatus = "todo" | "in-progress" | "done" | "blocked";
 
 export interface Task {
   id: string;
@@ -7,7 +7,7 @@ export interface Task {
   notes?: string[];
   status: TaskStatus;
   tags: string[];
-  source: 'claude' | 'opencode' | 'manual';
+  source: "claude" | "opencode" | "manual";
   createdAt: string;
   updatedAt: string;
 }
@@ -16,7 +16,7 @@ export interface SessionInfo {
   name: string;
   path: string;
   detectedAt: string;
-  source: 'claude' | 'opencode' | 'manual' | 'independent';
+  source: "claude" | "opencode" | "manual" | "independent" | "git";
 }
 
 export interface TaskFlowData {
@@ -31,18 +31,23 @@ export interface SessionsData {
   active: string | undefined;
 }
 
-export const STATUS_ORDER: TaskStatus[] = ['todo', 'in-progress', 'done', 'blocked'];
+export const STATUS_ORDER: TaskStatus[] = [
+  "todo",
+  "in-progress",
+  "done",
+  "blocked",
+];
 
 export const STATUS_LABELS: Record<TaskStatus, string> = {
-  'todo': 'To Do',
-  'in-progress': 'In Progress',
-  'done': 'Done',
-  'blocked': 'Blocked',
+  todo: "To Do",
+  "in-progress": "In Progress",
+  done: "Done",
+  blocked: "Blocked",
 };
 
 export const STATUS_COLORS: Record<TaskStatus, string> = {
-  'todo': '#F59E0B',
-  'in-progress': '#3B82F6',
-  'done': '#10B981',
-  'blocked': '#EF4444',
+  todo: "#F59E0B",
+  "in-progress": "#3B82F6",
+  done: "#10B981",
+  blocked: "#EF4444",
 };

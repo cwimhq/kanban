@@ -1,6 +1,6 @@
 {
   "name": "@cwim/kanban",
-  "version": "1.1.17",
+  "version": "1.1.18",
   "description": "Minimal Kanban task tracking with MCP integration for Claude Code",
   "type": "module",
   "main": "dist/index.js",

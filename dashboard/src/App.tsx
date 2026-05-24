@@ -3,7 +3,7 @@ import { KanbanBoard } from './components/KanbanBoard.tsx';
 import { useTasks } from './hooks/useTasks.ts';
 
 function App() {
-  const { data, sessions, switchSession } = useTasks();
+  const { data, sessions, loading, error, refresh, switchSession } = useTasks();
 
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-[#0A0A0F]">
@@ -12,7 +12,12 @@ function App() {
         sessions={sessions}
         onSwitchSession={switchSession}
       />
-      <KanbanBoard />
+      <KanbanBoard 
+        data={data}
+        loading={loading}
+        error={error}
+        refresh={refresh}
+      />
     </div>
   );
 }

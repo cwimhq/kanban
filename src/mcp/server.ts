@@ -6,6 +6,7 @@ import {
   ListToolsRequestSchema,
   type CallToolRequest,
 } from '@modelcontextprotocol/sdk/types.js';
+import { execSync } from 'child_process';
 import {
   listTasks,
   getTask,
@@ -28,7 +29,6 @@ function detectAgent(): 'claude' | 'opencode' {
   // Try to detect parent process name cross-platform
   if (process.ppid) {
     try {
-      const { execSync } = require('child_process');
       let parentProcess = '';
       
       if (process.platform === 'win32') {
@@ -60,7 +60,7 @@ const CURRENT_AGENT = detectAgent();
 const server = new Server(
   {
     name: 'cwim-kanban',
-    version: '1.0.0',
+    version: '1.1.18',
   },
   {
     capabilities: {

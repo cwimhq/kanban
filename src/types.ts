@@ -16,6 +16,7 @@ export interface SessionInfo {
   name: string;
   path: string;
   detectedAt: string;
+  source: 'claude' | 'opencode' | 'manual' | 'independent';
 }
 
 export interface TaskFlowData {

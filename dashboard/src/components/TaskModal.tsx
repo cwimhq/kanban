@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { X, Bot, Hand, Calendar, Clock, Hash } from 'lucide-react';
+import { X, Bot, Hand, Calendar, Clock, Hash, Terminal } from 'lucide-react';
 import { STATUS_COLORS, STATUS_LABELS } from '../types.ts';
 import type { Task } from '../types.ts';
 import { Tag } from './Tag.tsx';
@@ -157,6 +157,11 @@ export function TaskModal({ task, onClose }: TaskModalProps) {
                   <>
                     <Bot size={13} />
                     <span>Source: Claude</span>
+                  </>
+                ) : task.source === 'opencode' ? (
+                  <>
+                    <Terminal size={13} />
+                    <span>Source: OpenCode</span>
                   </>
                 ) : (
                   <>

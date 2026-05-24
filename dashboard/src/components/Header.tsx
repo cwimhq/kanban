@@ -1,8 +1,23 @@
 import { useState, useRef, useEffect } from 'react';
-import { LayoutGrid, ChevronDown, Check } from 'lucide-react';
+import { LayoutGrid, ChevronDown, Check, Bot, Terminal, HardDrive } from 'lucide-react';
 import { LiveIndicator } from './LiveIndicator.tsx';
 import { STATUS_COLORS } from '../types.ts';
-import type { TaskFlowData, SessionsData } from '../types.ts';
+import type { TaskFlowData, SessionsData, SessionInfo } from '../types.ts';
+
+function SessionSourceIcon({ source }: { source: SessionInfo['source'] }) {
+  switch (source) {
+    case 'claude':
+      return <span title="Claude Code"><Bot size={12} className="text-[#D4A574] shrink-0" /></span>;
+    case 'opencode':
+      return <span title="OpenCode"><Terminal size={12} className="text-[#60A5FA] shrink-0" /></span>;
+    case 'manual':
+      return <span title="Manual"><HardDrive size={12} className="text-[var(--text-muted)] shrink-0" /></span>;
+    case 'independent':
+      return <span title="Independent"><HardDrive size={12} className="text-[var(--text-muted)] shrink-0" /></span>;
+    default:
+      return null;
+  }
+}
 
 interface HeaderProps {
   data: TaskFlowData | null;
@@ -22,6 +37,7 @@ export function Header({ data, sessions, onSwitchSession }: HeaderProps) {
 
   const activeSession = sessions?.active ?? data?.session?.name ?? 'independent';
   const sessionList = sessions?.sessions ?? [];
+  const activeSessionInfo = sessionList.find((s) => s.name === activeSession);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -58,10 +74,11 @@ export function Header({ data, sessions, onSwitchSession }: HeaderProps) {
           onClick={() => setDropdownOpen(!dropdownOpen)}
           className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[13px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-3)] transition-all duration-150"
         >
+          {activeSessionInfo && <SessionSourceIcon source={activeSessionInfo.source} />}
           <span className="font-medium">{displayName}</span>
-          <ChevronDown 
-            size={14} 
-            className={`transition-transform duration-200 ${dropdownOpen ? 'rotate-180' : ''}`} 
+          <ChevronDown
+            size={14}
+            className={`transition-transform duration-200 ${dropdownOpen ? 'rotate-180' : ''}`}
           />
         </button>
 
@@ -80,6 +97,7 @@ export function Header({ data, sessions, onSwitchSession }: HeaderProps) {
                     : 'text-[var(--text-primary)] hover:bg-[var(--surface-3)]'
                 }`}
               >
+                <SessionSourceIcon source={session.source} />
                 <span className="flex-1 text-left truncate font-medium">
                   {session.name === 'independent' ? 'Independent Mode' : session.name}
                 </span>

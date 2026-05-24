@@ -3,8 +3,14 @@ import { Column } from './Column.tsx';
 import { NewTaskToast } from './NewTaskToast.tsx';
 import { TaskModal } from './TaskModal.tsx';
 import { STATUS_ORDER } from '../types.ts';
-import { useTasks } from '../hooks/useTasks.ts';
-import type { Task } from '../types.ts';
+import type { Task, TaskFlowData } from '../types.ts';
+
+interface KanbanBoardProps {
+  data: TaskFlowData | null;
+  loading: boolean;
+  error: string | null;
+  refresh: () => void;
+}
 
 function LoadingSkeleton() {
   return (
@@ -29,8 +35,7 @@ function LoadingSkeleton() {
   );
 }
 
-export function KanbanBoard() {
-  const { data, loading, error, refresh, getNewlyMovedTasks } = useTasks();
+export function KanbanBoard({ data, loading, error, refresh }: KanbanBoardProps) {
   const [movedTasks, setMovedTasks] = useState<Set<string>>(new Set());
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const prevTasksRef = useRef<Task[]>([]);
@@ -38,7 +43,14 @@ export function KanbanBoard() {
   // Detect moved tasks
   useEffect(() => {
     if (!data) return;
-    const newMoved = getNewlyMovedTasks(data.tasks, prevTasksRef.current);
+    const prevTasks = prevTasksRef.current;
+    const newMoved = new Set<string>();
+    for (const newTask of data.tasks) {
+      const oldTask = prevTasks.find((t) => t.id === newTask.id);
+      if (oldTask && oldTask.status !== newTask.status) {
+        newMoved.add(newTask.id);
+      }
+    }
     if (newMoved.size > 0) {
       setMovedTasks(newMoved);
       // Clear flash after animation
@@ -54,6 +66,15 @@ export function KanbanBoard() {
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (e.ctrlKey || e.metaKey || e.altKey) return;
+      // Ignore if user is typing in an input
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable
+      ) {
+        return;
+      }
       const num = parseInt(e.key, 10);
       if (num >= 1 && num <= 4) {
         e.preventDefault();

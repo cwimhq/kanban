@@ -12,6 +12,8 @@ export {
   setActiveSession,
   detectLatestSession,
   getActiveSession,
+  appendNote,
+  recallTasks,
 } from './storage/store.js';
 
 export { startMcpServer } from './mcp/server.js';

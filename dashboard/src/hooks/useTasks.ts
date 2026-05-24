@@ -67,6 +67,15 @@ export function useTasks(): UseTasksResult {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'r' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        // Ignore if user is typing in an input
+        const target = e.target as HTMLElement;
+        if (
+          target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable
+        ) {
+          return;
+        }
         fetchData();
       }
     };

@@ -71,25 +71,40 @@ async function detectClaudeSessions(): Promise<SessionInfo[]> {
         name: e.name,
         path: path.join(CLAUDE_PROJECTS_DIR, e.name),
         detectedAt: new Date().toISOString(),
+        source: 'claude' as const,
       }));
   } catch {
     return [];
   }
 }
 
+const OPENCODE_CONFIG_EXCLUDES = new Set([
+  'agents', 'commands', 'modes', 'plugins', 'skills', 'tools', 'themes', 'node_modules'
+]);
+
+const OPENCODE_DATA_EXCLUDES = new Set([
+  'bin', 'log', 'repos', 'snapshot', 'storage', 'tool-output'
+]);
+
+const ALL_INTERNAL_NAMES = new Set([
+  ...OPENCODE_CONFIG_EXCLUDES,
+  ...OPENCODE_DATA_EXCLUDES,
+]);
+
 async function detectOpencodeSessions(): Promise<SessionInfo[]> {
   const sessions: SessionInfo[] = [];
-  
+
   // Check ~/.config/opencode/ for project directories
   try {
     if (existsSync(OPENCODE_CONFIG_DIR)) {
       const entries = await fs.readdir(OPENCODE_CONFIG_DIR, { withFileTypes: true });
       for (const entry of entries) {
-        if (entry.isDirectory() && !['agents', 'commands', 'modes', 'plugins', 'skills', 'tools', 'themes'].includes(entry.name)) {
+        if (entry.isDirectory() && !OPENCODE_CONFIG_EXCLUDES.has(entry.name)) {
           sessions.push({
             name: entry.name,
             path: path.join(OPENCODE_CONFIG_DIR, entry.name),
             detectedAt: new Date().toISOString(),
+            source: 'opencode' as const,
           });
         }
       }
@@ -97,13 +112,13 @@ async function detectOpencodeSessions(): Promise<SessionInfo[]> {
   } catch {
     // Ignore errors
   }
-  
+
   // Check ~/.local/share/opencode/ for session data
   try {
     if (existsSync(OPENCODE_DATA_DIR)) {
       const entries = await fs.readdir(OPENCODE_DATA_DIR, { withFileTypes: true });
       for (const entry of entries) {
-        if (entry.isDirectory() && !['bin', 'log'].includes(entry.name)) {
+        if (entry.isDirectory() && !OPENCODE_DATA_EXCLUDES.has(entry.name)) {
           const sessionName = entry.name;
           // Only add if not already found
           if (!sessions.some(s => s.name === sessionName)) {
@@ -111,6 +126,7 @@ async function detectOpencodeSessions(): Promise<SessionInfo[]> {
               name: sessionName,
               path: path.join(OPENCODE_DATA_DIR, entry.name),
               detectedAt: new Date().toISOString(),
+              source: 'opencode' as const,
             });
           }
         }
@@ -119,7 +135,7 @@ async function detectOpencodeSessions(): Promise<SessionInfo[]> {
   } catch {
     // Ignore errors
   }
-  
+
   return sessions;
 }
 
@@ -165,6 +181,7 @@ export async function detectSessions(): Promise<SessionInfo[]> {
       name: s.name,
       path: s.path,
       detectedAt: s.detectedAt,
+      source: s.source,
     }));
   } catch {
     return [];
@@ -186,16 +203,22 @@ export async function listAllSessions(): Promise<SessionInfo[]> {
   if (existsSync(SESSIONS_DIR)) {
     const entries = await fs.readdir(SESSIONS_DIR, { withFileTypes: true });
     for (const entry of entries) {
-      if (entry.isDirectory() && !detectedNames.has(entry.name) && entry.name !== 'independent') {
+      if (
+        entry.isDirectory() &&
+        !detectedNames.has(entry.name) &&
+        entry.name !== 'independent' &&
+        !ALL_INTERNAL_NAMES.has(entry.name)
+      ) {
         storedSessions.push({
           name: entry.name,
           path: getSessionDir(entry.name),
           detectedAt: new Date().toISOString(),
+          source: 'manual' as const,
         });
       }
     }
   }
-  
+
   // Always include independent mode
   const allSessions = [
     ...detected,
@@ -204,6 +227,7 @@ export async function listAllSessions(): Promise<SessionInfo[]> {
       name: 'independent',
       path: getSessionDir('independent'),
       detectedAt: new Date().toISOString(),
+      source: 'independent' as const,
     },
   ];
   
@@ -247,7 +271,9 @@ async function writeSessionData(sessionName: string, data: TaskFlowData): Promis
   const dataFile = getSessionDataFile(sessionName);
   ensureDir(getSessionDir(sessionName));
   data.updatedAt = new Date().toISOString();
-  await fs.writeFile(dataFile, JSON.stringify(data, null, 2), 'utf-8');
+  const tempFile = dataFile + '.tmp';
+  await fs.writeFile(tempFile, JSON.stringify(data, null, 2), 'utf-8');
+  await fs.rename(tempFile, dataFile);
 }
 
 // Task CRUD (session-aware)

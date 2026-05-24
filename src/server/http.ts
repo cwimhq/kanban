@@ -10,6 +10,8 @@ import {
   getCurrentSessionName 
 } from '../storage/store.js';
 
+const MAX_BODY_SIZE = 1024 * 1024; // 1MB
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -30,8 +32,8 @@ export function createDashboardServer(port: number = 3456): Server {
     const url = req.url ?? '/';
     const method = req.method ?? 'GET';
 
-    // CORS
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    // CORS - only allow same-origin requests since dashboard is served from this server
+    res.setHeader('Access-Control-Allow-Origin', 'http://localhost:' + port);
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
@@ -73,8 +75,21 @@ export function createDashboardServer(port: number = 3456): Server {
         // POST /api/sessions/active - Set active session
         if (url === '/api/sessions/active' && method === 'POST') {
           let body = '';
-          req.on('data', (chunk) => { body += chunk; });
+          let bodySize = 0;
+          let aborted = false;
+          req.on('data', (chunk) => {
+            if (aborted) return;
+            bodySize += chunk.length;
+            if (bodySize > MAX_BODY_SIZE) {
+              aborted = true;
+              res.writeHead(413, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: 'Request body too large' }));
+              return;
+            }
+            body += chunk;
+          });
           req.on('end', async () => {
+            if (aborted) return;
             try {
               const { name } = JSON.parse(body);
               if (!name || typeof name !== 'string') {
@@ -106,7 +121,14 @@ export function createDashboardServer(port: number = 3456): Server {
     }
 
     // Static files
-    let filePath = path.join(DASHBOARD_DIR, url === '/' ? 'index.html' : url);
+    const safeUrl = url === '/' ? 'index.html' : url;
+    // Prevent path traversal: reject URLs with .. or null bytes
+    if (safeUrl.includes('..') || safeUrl.includes('\0')) {
+      res.writeHead(403, { 'Content-Type': 'text/plain' });
+      res.end('Forbidden');
+      return;
+    }
+    let filePath = path.join(DASHBOARD_DIR, safeUrl);
     const ext = path.extname(filePath).toLowerCase();
 
     // If no extension, try .html (SPA routing)
@@ -114,11 +136,20 @@ export function createDashboardServer(port: number = 3456): Server {
       filePath += '.html';
     }
 
+    // Resolve and ensure the final path stays within DASHBOARD_DIR
+    const resolvedDashboard = path.resolve(DASHBOARD_DIR);
+    let resolvedPath = path.resolve(filePath);
+    if (!resolvedPath.startsWith(resolvedDashboard)) {
+      res.writeHead(403, { 'Content-Type': 'text/plain' });
+      res.end('Forbidden');
+      return;
+    }
+
     try {
-      if (!existsSync(filePath)) {
+      if (!existsSync(resolvedPath)) {
         // SPA fallback: serve index.html for non-API routes
         if (!url.startsWith('/api/')) {
-          filePath = path.join(DASHBOARD_DIR, 'index.html');
+          resolvedPath = path.join(DASHBOARD_DIR, 'index.html');
         } else {
           res.writeHead(404, { 'Content-Type': 'text/plain' });
           res.end('Not found');
@@ -126,7 +157,7 @@ export function createDashboardServer(port: number = 3456): Server {
         }
       }
 
-      const content = await fs.readFile(filePath);
+      const content = await fs.readFile(resolvedPath);
       const mimeType = MIME_TYPES[ext] || 'application/octet-stream';
       res.writeHead(200, { 'Content-Type': mimeType });
       res.end(content);

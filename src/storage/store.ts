@@ -150,7 +150,11 @@ async function queryOpencodeDatabase(): Promise<SessionInfo[]> {
       result = execSync(`sqlite3 "${dbPath}" < "${tempQueryFile}"`, {
         encoding: "utf8",
         timeout: 10000,
+        stdio: ["pipe", "pipe", "pipe"],
       });
+    } catch {
+      // sqlite3 not installed or other error - return empty to trigger fallback
+      return [];
     } finally {
       // Clean up temp file
       try {

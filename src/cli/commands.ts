@@ -1,6 +1,11 @@
 #!/usr/bin/env node
+import { createRequire } from "module";
 import { Command } from "commander";
 import { startDashboardServer } from "../server/http.js";
+
+const { version } = createRequire(import.meta.url)("../../package.json") as {
+  version: string;
+};
 import { startMcpServer } from "../mcp/server.js";
 import {
   initStorage,
@@ -27,7 +32,7 @@ program
   .description(
     "Minimal Kanban task tracking for AI agents (Claude Code, OpenCode)",
   )
-  .version("1.2.1");
+  .version(version);
 
 // Default: start dashboard
 program

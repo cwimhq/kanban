@@ -6,7 +6,12 @@ import {
   ListToolsRequestSchema,
   type CallToolRequest,
 } from "@modelcontextprotocol/sdk/types.js";
+import { createRequire } from "module";
 import { execSync } from "child_process";
+
+const { version } = createRequire(import.meta.url)("../../package.json") as {
+  version: string;
+};
 import {
   listTasks,
   getTask,
@@ -69,7 +74,7 @@ const CURRENT_AGENT = detectAgent();
 const server = new Server(
   {
     name: "cwim-kanban",
-    version: "1.2.2",
+    version,
   },
   {
     capabilities: {

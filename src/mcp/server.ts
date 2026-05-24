@@ -69,7 +69,7 @@ const CURRENT_AGENT = detectAgent();
 const server = new Server(
   {
     name: "cwim-kanban",
-    version: "1.2.0",
+    version: "1.2.1",
   },
   {
     capabilities: {

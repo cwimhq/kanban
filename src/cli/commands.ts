@@ -27,7 +27,7 @@ program
   .description(
     "Minimal Kanban task tracking for AI agents (Claude Code, OpenCode)",
   )
-  .version("1.2.0");
+  .version("1.2.1");
 
 // Default: start dashboard
 program

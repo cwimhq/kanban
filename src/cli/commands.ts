@@ -24,7 +24,7 @@ const program = new Command();
 
 program
   .name('kanban')
-  .description('Minimal Kanban task tracking for Claude Code')
+  .description('Minimal Kanban task tracking for AI agents (Claude Code, OpenCode)')
   .version('1.0.0');
 
 // Default: start dashboard
@@ -54,7 +54,7 @@ program
 // MCP server mode
 program
   .command('mcp')
-  .description('Start the MCP server (for Claude Code integration)')
+  .description('Start the MCP server (for Claude Code or OpenCode integration)')
   .action(async () => {
     await initStorage();
     await startMcpServer();

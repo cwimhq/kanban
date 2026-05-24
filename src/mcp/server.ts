@@ -21,6 +21,19 @@ import {
 } from '../storage/store.js';
 import { VALID_STATUSES } from '../types.js';
 
+function detectAgent(): 'claude' | 'opencode' {
+  if (process.env.CLAUDE_CODE) return 'claude';
+  if (process.env.OPENCODE) return 'opencode';
+  
+  const parentProcess = process.ppid ? require('child_process').execSync(`ps -p ${process.ppid} -o comm=`, { encoding: 'utf8' }).trim() : '';
+  if (parentProcess.includes('claude')) return 'claude';
+  if (parentProcess.includes('opencode')) return 'opencode';
+  
+  return 'claude';
+}
+
+const CURRENT_AGENT = detectAgent();
+
 const server = new Server(
   {
     name: 'cwim-kanban',
@@ -211,7 +224,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request: CallToolRequest)
             ? (args.status as any)
             : 'todo',
           tags: Array.isArray(args.tags) ? args.tags.map(String) : undefined,
-          source: 'claude',
+          source: CURRENT_AGENT,
         });
         const sessionName = await getCurrentSessionName();
         return {

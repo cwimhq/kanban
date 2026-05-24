@@ -7,6 +7,8 @@ const KANBAN_DIR = path.join(os.homedir(), '.kanban');
 const SESSIONS_DIR = path.join(KANBAN_DIR, 'sessions');
 const ACTIVE_SESSION_FILE = path.join(KANBAN_DIR, 'active-session.json');
 const CLAUDE_PROJECTS_DIR = path.join(os.homedir(), '.claude', 'projects');
+const OPENCODE_CONFIG_DIR = path.join(os.homedir(), '.config', 'opencode');
+const OPENCODE_DATA_DIR = path.join(os.homedir(), '.local', 'share', 'opencode');
 
 function getDefaultData(): TaskFlowData {
   return {
@@ -59,25 +61,102 @@ export async function setActiveSession(sessionName: string): Promise<void> {
 
 // Session detection
 
-export async function detectSessions(): Promise<SessionInfo[]> {
+async function detectClaudeSessions(): Promise<SessionInfo[]> {
   try {
     if (!existsSync(CLAUDE_PROJECTS_DIR)) return [];
     const entries = await fs.readdir(CLAUDE_PROJECTS_DIR, { withFileTypes: true });
-    const sessions = entries
+    return entries
       .filter((e) => e.isDirectory())
       .map((e) => ({
         name: e.name,
         path: path.join(CLAUDE_PROJECTS_DIR, e.name),
         detectedAt: new Date().toISOString(),
       }));
+  } catch {
+    return [];
+  }
+}
+
+async function detectOpencodeSessions(): Promise<SessionInfo[]> {
+  const sessions: SessionInfo[] = [];
+  
+  // Check ~/.config/opencode/ for project directories
+  try {
+    if (existsSync(OPENCODE_CONFIG_DIR)) {
+      const entries = await fs.readdir(OPENCODE_CONFIG_DIR, { withFileTypes: true });
+      for (const entry of entries) {
+        if (entry.isDirectory() && !['agents', 'commands', 'modes', 'plugins', 'skills', 'tools', 'themes'].includes(entry.name)) {
+          sessions.push({
+            name: entry.name,
+            path: path.join(OPENCODE_CONFIG_DIR, entry.name),
+            detectedAt: new Date().toISOString(),
+          });
+        }
+      }
+    }
+  } catch {
+    // Ignore errors
+  }
+  
+  // Check ~/.local/share/opencode/ for session data
+  try {
+    if (existsSync(OPENCODE_DATA_DIR)) {
+      const entries = await fs.readdir(OPENCODE_DATA_DIR, { withFileTypes: true });
+      for (const entry of entries) {
+        if (entry.isDirectory() && !['bin', 'log'].includes(entry.name)) {
+          const sessionName = entry.name;
+          // Only add if not already found
+          if (!sessions.some(s => s.name === sessionName)) {
+            sessions.push({
+              name: sessionName,
+              path: path.join(OPENCODE_DATA_DIR, entry.name),
+              detectedAt: new Date().toISOString(),
+            });
+          }
+        }
+      }
+    }
+  } catch {
+    // Ignore errors
+  }
+  
+  return sessions;
+}
+
+export async function detectSessions(): Promise<SessionInfo[]> {
+  try {
+    // Detect sessions from both Claude and opencode
+    const [claudeSessions, opencodeSessions] = await Promise.all([
+      detectClaudeSessions(),
+      detectOpencodeSessions(),
+    ]);
+    
+    // Merge and deduplicate by name
+    const sessionMap = new Map<string, SessionInfo>();
+    
+    for (const session of claudeSessions) {
+      sessionMap.set(session.name, session);
+    }
+    
+    for (const session of opencodeSessions) {
+      if (!sessionMap.has(session.name)) {
+        sessionMap.set(session.name, session);
+      }
+    }
+    
+    const sessions = Array.from(sessionMap.values());
     
     if (sessions.length === 0) return [];
     
     // Sort by most recently modified
     const stats = await Promise.all(
       sessions.map(async (s) => {
-        const stat = await fs.stat(s.path);
-        return { ...s, mtime: stat.mtime };
+        try {
+          const stat = await fs.stat(s.path);
+          return { ...s, mtime: stat.mtime };
+        } catch {
+          return { ...s, mtime: new Date(0) };
+        }
       })
     );
     stats.sort((a, b) => b.mtime.getTime() - a.mtime.getTime());
@@ -208,7 +287,7 @@ export async function createTask(
     description?: string;
     status?: TaskStatus;
     tags?: string[];
-    source?: 'claude' | 'manual';
+    source?: 'claude' | 'opencode' | 'manual';
   },
   sessionName?: string
 ): Promise<Task> {

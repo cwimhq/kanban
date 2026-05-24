@@ -7,7 +7,7 @@ export interface Task {
   notes?: string[];
   status: TaskStatus;
   tags: string[];
-  source: 'claude' | 'manual';
+  source: 'claude' | 'opencode' | 'manual';
   createdAt: string;
   updatedAt: string;
 }

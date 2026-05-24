@@ -2,7 +2,9 @@
 
 > Your AI's long-term memory. Visualized.
 
-**CWIM Kanban gives Claude Code a persistent memory layer.** It remembers what you were working on, recalls context automatically, and shows you everything on a live dashboard.
+**CWIM Kanban gives your AI agent a persistent memory layer.** It remembers what you were working on, recalls context automatically, and shows you everything on a live dashboard.
+
+Works with **Claude Code** and **OpenCode**.
 
 No more "what were we doing again?" between sessions.
 
@@ -38,8 +40,13 @@ kanban
 ```bash
 # Start the dashboard
 kanban
+```
 
-# Add to your Claude Code MCP config (~/.claude/claude.json)
+### Claude Code Setup
+
+Add to your Claude Code MCP config (`~/.claude/claude.json`):
+
+```json
 {
   "mcpServers": {
     "kanban": {
@@ -50,9 +57,26 @@ kanban
 }
 ```
 
-## Making Claude Use It
+### OpenCode Setup
 
-Just installing the MCP isn't enough — Claude needs instructions to use it.
+Add to your OpenCode config (`opencode.json` in project root or `~/.config/opencode/opencode.json`):
+
+```json
+{
+  "mcp": {
+    "kanban": {
+      "command": "npx",
+      "args": ["@cwim/kanban", "mcp"]
+    }
+  }
+}
+```
+
+## Making Your AI Agent Use It
+
+Just installing the MCP isn't enough — your AI agent needs instructions to use it.
+
+### For Claude Code
 
 Add a `CLAUDE.md` file to your project root:
 
@@ -78,6 +102,33 @@ Use the cwim-kanban MCP to track all work in this project.
 ```
 
 This makes the behavior automatic — no need to ask Claude every session.
+
+### For OpenCode
+
+Add an `AGENTS.md` file to your project root (or add to your existing one):
+
+```markdown
+## Task Tracking
+Use the cwim-kanban MCP to track all work in this project.
+
+### Workflow
+1. **Before starting**: Call `task_recall` with what you're about to work on
+2. **Starting a task**: Create or move to `in-progress`
+3. **Making progress**: Append notes with discoveries, decisions, or blockers
+4. **Finishing**: Move to `done` and append a summary note
+5. **Blocked**: Move to `blocked` with a note explaining why
+
+### Rules
+- Always check for existing tasks before creating new ones
+- **One task per unit of work** - If a request involves multiple distinct steps (e.g., "fix auth and update docs"), create separate tasks for each step instead of one combined task
+- **Always verify the active session before creating tasks** - Call `session_list` first, confirm the active session matches the current project, and call `session_switch` if it doesn't
+- Use tags consistently (e.g., "bug", "feature", "refactor", "docs")
+- Append notes liberally - they build context for future sessions
+- Move tasks to "blocked" immediately when stuck, with explanation
+- Keep task titles concise but descriptive
+```
+
+This makes the behavior automatic for OpenCode sessions as well.
 
 ## Memory Features
 
@@ -106,11 +157,11 @@ Each note is timestamped and preserved. The task grows smarter as you work.
 
 ### Session Isolation
 
-Each Claude Code project gets its own memory space. Work on multiple projects without context bleeding:
+Each project gets its own memory space. Work on multiple projects without context bleeding:
 
-- Auto-detected from `~/.claude/projects/`
+- Auto-detected from `~/.claude/projects/` (Claude Code) and `~/.config/opencode/` (OpenCode)
 - Switch between sessions via dashboard, CLI, or MCP
-- "Independent Mode" for non-Claude work
+- "Independent Mode" for non-AI work
 
 ### Keyword Search
 
@@ -210,7 +261,7 @@ Claude Code → MCP Server (stdio) → session tasks.json ← HTTP Server ← Da
 ## Requirements
 
 - Node.js 18+
-- Claude Code (optional - dashboard works independently)
+- Claude Code or OpenCode (optional - dashboard works independently)
 
 ## License
 

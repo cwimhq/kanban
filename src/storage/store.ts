@@ -1,6 +1,7 @@
 import { promises as fs, existsSync, mkdirSync } from 'fs';
 import * as path from 'path';
 import * as os from 'os';
+import { execSync } from 'child_process';
 import type { Task, TaskFlowData, TaskStatus, SessionInfo } from '../types.js';
 
 const KANBAN_DIR = path.join(os.homedir(), '.kanban');
@@ -92,6 +93,81 @@ const ALL_INTERNAL_NAMES = new Set([
 ]);
 
 async function detectOpencodeSessions(): Promise<SessionInfo[]> {
+  // First, try to read from the OpenCode SQLite database (most accurate)
+  const dbSessions = await queryOpencodeDatabase();
+  if (dbSessions.length > 0) {
+    return dbSessions;
+  }
+
+  // Fallback: directory-based detection
+  return detectOpencodeSessionsFromDirectories();
+}
+
+async function queryOpencodeDatabase(): Promise<SessionInfo[]> {
+  const dbPath = path.join(OPENCODE_DATA_DIR, 'opencode.db');
+  if (!existsSync(dbPath)) {
+    return [];
+  }
+
+  try {
+    // Query projects from the SQLite database
+    // worktree is the actual project path, name may be empty
+    const query = `SELECT id, worktree, name, time_updated FROM project WHERE worktree IS NOT NULL AND worktree != '/' ORDER BY time_updated DESC;`;
+
+    // Write query to temp file to avoid shell escaping issues with paths
+    const tempQueryFile = path.join(os.tmpdir(), `opencode-query-${Date.now()}.sql`);
+    await fs.writeFile(tempQueryFile, query, 'utf-8');
+
+    let result: string;
+    try {
+      result = execSync(`sqlite3 "${dbPath}" < "${tempQueryFile}"`, {
+        encoding: 'utf8',
+        timeout: 10000,
+      });
+    } finally {
+      // Clean up temp file
+      try {
+        await fs.unlink(tempQueryFile);
+      } catch {
+        // Ignore cleanup errors
+      }
+    }
+
+    const sessions: SessionInfo[] = [];
+    const seenPaths = new Set<string>();
+
+    for (const line of result.trim().split('\n')) {
+      if (!line.trim()) continue;
+      const parts = line.split('|');
+      if (parts.length < 4) continue;
+
+      const [, worktree, name, timeUpdated] = parts;
+      if (!worktree || worktree === '/') continue;
+
+      // Normalize path for deduplication
+      const normalizedPath = path.normalize(worktree);
+      if (seenPaths.has(normalizedPath)) continue;
+      seenPaths.add(normalizedPath);
+
+      // Use project name if available, otherwise basename of path
+      const sessionName = name?.trim() || path.basename(normalizedPath);
+
+      sessions.push({
+        name: sessionName,
+        path: normalizedPath,
+        detectedAt: new Date(parseInt(timeUpdated)).toISOString(),
+        source: 'opencode' as const,
+      });
+    }
+
+    return sessions;
+  } catch {
+    // If SQLite query fails, return empty to trigger fallback
+    return [];
+  }
+}
+
+async function detectOpencodeSessionsFromDirectories(): Promise<SessionInfo[]> {
   const sessions: SessionInfo[] = [];
 
   // Check ~/.config/opencode/ for project directories

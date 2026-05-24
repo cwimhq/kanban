@@ -25,7 +25,7 @@ const program = new Command();
 program
   .name('kanban')
   .description('Minimal Kanban task tracking for AI agents (Claude Code, OpenCode)')
-  .version('1.1.19');
+  .version('1.1.20');
 
 // Default: start dashboard
 program

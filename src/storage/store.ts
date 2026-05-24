@@ -127,23 +127,67 @@ async function detectOpencodeSessions(): Promise<SessionInfo[]> {
   return detectOpencodeSessionsFromDirectories();
 }
 
+function buildOpencodeSessionsFromRows(
+  rows: Array<{ worktree: string | null; name: string | null; time_updated: number | null }>,
+): SessionInfo[] {
+  const sessions: SessionInfo[] = [];
+  const seenPaths = new Set<string>();
+
+  for (const row of rows) {
+    if (!row.worktree || row.worktree === "/") continue;
+    const normalizedPath = path.normalize(row.worktree);
+    if (seenPaths.has(normalizedPath)) continue;
+    seenPaths.add(normalizedPath);
+
+    const sessionName = row.name?.trim() || path.basename(normalizedPath);
+    sessions.push({
+      name: sessionName,
+      path: normalizedPath,
+      detectedAt: row.time_updated
+        ? new Date(row.time_updated).toISOString()
+        : new Date().toISOString(),
+      source: "opencode" as const,
+    });
+  }
+
+  return sessions;
+}
+
 async function queryOpencodeDatabase(): Promise<SessionInfo[]> {
   const dbPath = path.join(OPENCODE_DATA_DIR, "opencode.db");
   if (!existsSync(dbPath)) {
     return [];
   }
 
-  try {
-    // Query projects from the SQLite database
-    // worktree is the actual project path, name may be empty
-    const query = `SELECT id, worktree, name, time_updated FROM project WHERE worktree IS NOT NULL AND worktree != '/' ORDER BY time_updated DESC;`;
+  const SQL = `SELECT id, worktree, name, time_updated FROM project WHERE worktree IS NOT NULL AND worktree != '/' ORDER BY time_updated DESC`;
 
-    // Write query to temp file to avoid shell escaping issues with paths
+  // Primary: use Node.js built-in sqlite (Node 22.5+), no external deps needed
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const sqlite = await import("node:sqlite" as any);
+    const db = new sqlite.DatabaseSync(dbPath, { open: true });
+    try {
+      const rows = db.prepare(SQL).all() as Array<{
+        id: string;
+        worktree: string | null;
+        name: string | null;
+        time_updated: number | null;
+      }>;
+      return buildOpencodeSessionsFromRows(rows);
+    } finally {
+      db.close();
+    }
+  } catch {
+    // node:sqlite unavailable (Node < 22.5) — fall through to CLI
+  }
+
+  // Fallback: sqlite3 CLI (must be installed on the system)
+  try {
     const tempQueryFile = path.join(
       os.tmpdir(),
       `opencode-query-${Date.now()}.sql`,
     );
-    await fs.writeFile(tempQueryFile, query, "utf-8");
+    await fs.writeFile(tempQueryFile, SQL + ";", "utf-8");
 
     let result: string;
     try {
@@ -152,48 +196,30 @@ async function queryOpencodeDatabase(): Promise<SessionInfo[]> {
         timeout: 10000,
         stdio: ["pipe", "pipe", "pipe"],
       });
-    } catch {
-      // sqlite3 not installed or other error - return empty to trigger fallback
-      return [];
     } finally {
-      // Clean up temp file
       try {
         await fs.unlink(tempQueryFile);
       } catch {
-        // Ignore cleanup errors
+        // ignore cleanup errors
       }
     }
 
-    const sessions: SessionInfo[] = [];
-    const seenPaths = new Set<string>();
-
-    for (const line of result.trim().split("\n")) {
-      if (!line.trim()) continue;
-      const parts = line.split("|");
-      if (parts.length < 4) continue;
-
-      const [, worktree, name, timeUpdated] = parts;
-      if (!worktree || worktree === "/") continue;
-
-      // Normalize path for deduplication
-      const normalizedPath = path.normalize(worktree);
-      if (seenPaths.has(normalizedPath)) continue;
-      seenPaths.add(normalizedPath);
-
-      // Use project name if available, otherwise basename of path
-      const sessionName = name?.trim() || path.basename(normalizedPath);
-
-      sessions.push({
-        name: sessionName,
-        path: normalizedPath,
-        detectedAt: new Date(parseInt(timeUpdated)).toISOString(),
-        source: "opencode" as const,
+    const rows = result
+      .trim()
+      .split("\n")
+      .filter((l) => l.trim())
+      .map((line) => {
+        const [, worktree, name, time_updated] = line.split("|");
+        return {
+          worktree: worktree ?? null,
+          name: name ?? null,
+          time_updated: time_updated ? parseInt(time_updated) : null,
+        };
       });
-    }
 
-    return sessions;
+    return buildOpencodeSessionsFromRows(rows);
   } catch {
-    // If SQLite query fails, return empty to trigger fallback
+    // sqlite3 CLI not installed — return empty to trigger directory fallback
     return [];
   }
 }

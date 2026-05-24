@@ -311,6 +311,14 @@ async function detectGitRepoSessions(): Promise<SessionInfo[]> {
   ];
 }
 
+function encodePathLikeClaude(absolutePath: string): string {
+  // Claude names its project dirs by encoding the absolute path:
+  // replace path separators (and ':' for Windows drive letters) with '-', prepend '-'
+  // e.g., /Users/X1/myproject → -Users-X1-myproject
+  // e.g., C:\Users\X1\myproject → -C-Users-X1-myproject
+  return '-' + absolutePath.replace(/[/\\:]/g, '-');
+}
+
 export async function detectSessions(): Promise<SessionInfo[]> {
   try {
     // Detect sessions from all sources: Git (CWD), Claude, and OpenCode
@@ -335,6 +343,16 @@ export async function detectSessions(): Promise<SessionInfo[]> {
     // Git sessions take highest priority - they reflect the actual working directory
     for (const session of gitSessions) {
       sessionMap.set(session.name, session);
+    }
+
+    // Remove Claude sessions that are just encoded path duplicates of a git session.
+    // Claude dir names encode the full path (e.g., -Users-X1-project for /Users/X1/project),
+    // while git sessions use the plain basename — so they never match by name alone.
+    for (const gitSession of gitSessions) {
+      const expectedEncoding = encodePathLikeClaude(gitSession.path);
+      if (sessionMap.has(expectedEncoding)) {
+        sessionMap.delete(expectedEncoding);
+      }
     }
 
     const sessions = Array.from(sessionMap.values());
@@ -422,7 +440,14 @@ export async function listAllSessions(): Promise<SessionInfo[]> {
 // Get or initialize the current session name
 export async function getCurrentSessionName(): Promise<string> {
   const active = await getActiveSession();
-  if (active) return active;
+  if (active) {
+    // Validate the stored session is still in the known session list.
+    // Without this check the file becomes stale after switching projects —
+    // any subsequent call would return the old session forever.
+    const all = await listAllSessions();
+    if (all.some((s) => s.name === active)) return active;
+    // Stale — fall through to re-detect
+  }
 
   // Auto-detect and set
   const latest = await detectLatestSession();

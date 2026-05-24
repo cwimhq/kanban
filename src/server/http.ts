@@ -57,7 +57,7 @@ export function createDashboardServer(port: number = 3456): Server {
         // GET /api/sessions - List all available sessions
         if (url === '/api/sessions' && method === 'GET') {
           const sessions = await listAllSessions();
-          const active = await getActiveSession();
+          const active = await getCurrentSessionName();
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ sessions, active }));
           return;
